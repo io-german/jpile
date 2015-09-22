@@ -13,6 +13,8 @@ import javassist.util.proxy.MethodHandler;
 import javassist.util.proxy.ProxyFactory;
 import javassist.util.proxy.ProxyObject;
 
+import javax.annotation.Nonnull;
+
 /**
  * Creates an intermediate proxy object for a given interface. All calls are cached. See
  * <a href="https://github.com/martinus/java-playground/blob/master/src/java/com/ankerl/proxy/CachedProxy.java">CachedProxy</a>
@@ -52,7 +54,7 @@ public final class CachedProxy {
 
         @Override
         public int hashCode() {
-            return 31 * method.hashCode() + Arrays.deepHashCode(args);
+            return Arrays.deepHashCode(new Object[] { this.method, this.args });
         }
     }
 
@@ -75,7 +77,7 @@ public final class CachedProxy {
                 final LoadingCache<Args, Optional> cache = createCache(impl);
 
                 /**
-                 * Returns the cached value of this method. If the the method returns null then null is returned.
+                 * Returns the cached value of this method. If the method returns null then null is returned.
                  *
                  * {@inheritDoc}
                  */
@@ -86,10 +88,7 @@ public final class CachedProxy {
             });
             return cachedInstance;
         }
-        catch (InstantiationException e) {
-            throw Throwables.propagate(e);
-        }
-        catch (IllegalAccessException e) {
+        catch (InstantiationException | IllegalAccessException e) {
             throw Throwables.propagate(e);
         }
     }
@@ -99,7 +98,8 @@ public final class CachedProxy {
                            .softValues()
                            .build(new CacheLoader<Args, Optional>() {
                                @Override
-                               public Optional load(Args key) throws InvocationTargetException, IllegalAccessException {
+                               public Optional load(@Nonnull Args key)
+                                       throws InvocationTargetException, IllegalAccessException {
                                    return Optional.fromNullable(key.method.invoke(impl, key.args));
                                }
                            });

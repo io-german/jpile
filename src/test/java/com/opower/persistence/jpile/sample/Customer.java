@@ -19,7 +19,7 @@ import java.util.List;
  * @author amir.raminfar
  */
 @Entity
-@Table
+@Table(name = "customer")
 public class Customer {
     /**
      * The type of customer.
@@ -34,7 +34,6 @@ public class Customer {
     private List<Product> products;
     private Date lastSeenOn;
     private Type type;
-
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)

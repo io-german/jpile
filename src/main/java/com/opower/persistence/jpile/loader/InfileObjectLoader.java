@@ -80,10 +80,9 @@ public abstract class InfileObjectLoader<E> implements Flushable {
         JdbcUtil.StatementCallback<List<Exception>> statementCallback = new InfileStatementCallback(
                 this.loadInfileSql, this.infileDataBuffer.asInputStream()
         );
-        this.warnings = JdbcUtil.execute(connection, statementCallback);
+        this.warnings = JdbcUtil.execute(this.connection, statementCallback);
         this.infileDataBuffer.clear();
     }
-
 
     /**
      * Adds data from a given entity to an infile row via said row's various <code>append</code> methods.

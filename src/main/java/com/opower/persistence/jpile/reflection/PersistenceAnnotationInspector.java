@@ -46,7 +46,6 @@ public class PersistenceAnnotationInspector {
         return AnnotationUtils.findAnnotation(clazz, annotationType);
     }
 
-
     /**
      * Finds the annotation on a method or parent's methods.
      * Uses <code>AnnotationUtils.findAnnotation()</code> from Spring framework. Searches all subclasses and class.
@@ -162,7 +161,7 @@ public class PersistenceAnnotationInspector {
      * @param aClass the class to check
      * @return true if a {@link Boolean} or {@link boolean}
      */
-    private static boolean isBooleanClass(Class aClass) {
+    private static boolean isBooleanClass(Class<?> aClass) {
         return Boolean.class.equals(aClass) || boolean.class.equals(aClass);
     }
 
@@ -176,7 +175,7 @@ public class PersistenceAnnotationInspector {
         if (isBooleanClass(getter.getReturnType()) && getter.getName().startsWith(IS_PREFIX)) {
             return IS_PREFIX;
         }
-        
+
         return GETTER_PREFIX;
     }
 
@@ -281,7 +280,6 @@ public class PersistenceAnnotationInspector {
         return methods;
     }
 
-
     /**
      * Returns all methods that are annotated with multiple annotations.
      *
@@ -289,14 +287,13 @@ public class PersistenceAnnotationInspector {
      * @param annotations all annotations
      * @return the list of methods
      */
-    public List<Method> methodsAnnotatedWith(Class<?> aClazz, final Class... annotations) {
+    @SafeVarargs
+    public final List<Method> methodsAnnotatedWith(Class<?> aClazz, final Class<? extends Annotation>... annotations) {
         return methodsAnnotatedWith(aClazz, new Predicate<Method>() {
 
             public boolean apply(Method m) {
-                for (Class aClass : annotations) {
-                    @SuppressWarnings("unchecked")
-                    Class<? extends Annotation> a = (Class<? extends Annotation>) aClass;
-                    if (m.getAnnotation(a) == null) {
+                for (Class<? extends Annotation> annotation : annotations) {
+                    if (m.getAnnotation(annotation) == null) {
                         return false;
                     }
                 }
@@ -315,7 +312,6 @@ public class PersistenceAnnotationInspector {
     public List<Method> methodsAnnotatedWith(Class<?> aClass, Predicate<Method> predicate) {
         return newArrayList(Iterables.filter(copyOf(ReflectionUtils.getAllDeclaredMethods(aClass)), predicate));
     }
-
 
     /**
      * A helper method for getting an id from a persist object with annotated @Id.
@@ -391,11 +387,11 @@ public class PersistenceAnnotationInspector {
         }
 
         public Method getMethod() {
-            return method;
+            return this.method;
         }
 
         public E getAnnotation() {
-            return annotation;
+            return this.annotation;
         }
     }
 }

@@ -1,6 +1,5 @@
 package com.opower.persistence.jpile.loader;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.opower.persistence.jpile.infile.InfileDataBuffer;
 import com.opower.persistence.jpile.infile.InfileRow;
@@ -16,13 +15,13 @@ import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.Date;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Throwables.propagate;
-import static com.google.common.collect.Sets.newLinkedHashSet;
 import static com.opower.persistence.jpile.reflection.PersistenceAnnotationInspector.getIdValue;
 import static com.opower.persistence.jpile.reflection.PersistenceAnnotationInspector.setIdValue;
 import static com.opower.persistence.jpile.util.Hex.encodeHexString;
@@ -41,13 +40,13 @@ public class SingleInfileObjectLoader<E> extends InfileObjectLoader<E> {
     protected final Map<String, Method> mappings = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
     protected final Map<Method, SingleInfileObjectLoader<Object>> embeds = new LinkedHashMap<>();
 
-    protected final Class<E> aClass;
+    protected final Class<? extends E> aClass;
     protected PersistenceAnnotationInspector persistenceAnnotationInspector;
     protected boolean allowNull = false;
     protected boolean autoGenerateId = false;
     protected boolean embedChild = false;
 
-    SingleInfileObjectLoader(Class<E> aClass) {
+    SingleInfileObjectLoader(Class<? extends E> aClass) {
         this.aClass = aClass;
     }
 
@@ -56,59 +55,59 @@ public class SingleInfileObjectLoader<E> extends InfileObjectLoader<E> {
      */
     @Override
     public void convertToInfileRow(E entity, InfileRow infileRow) {
-        if (entity == null && allowNull) {
-            for (int i = 0; i < mappings.size(); i++) {
+        if (entity == null && this.allowNull) {
+            for (int i = 0; i < this.mappings.size(); i++) {
                 infileRow.appendNull();
             }
-            for (SingleInfileObjectLoader<Object> loader : embeds.values()) {
+            for (SingleInfileObjectLoader<Object> loader : this.embeds.values()) {
                 loader.convertToInfileRow(null, infileRow);
             }
         }
         else {
-            if (!embedChild && getIdValue(persistenceAnnotationInspector, entity) == null) {
+            if (!this.embedChild && getIdValue(this.persistenceAnnotationInspector, entity) == null) {
                 generateAndSetId(entity);
             }
-            for (Method m : mappings.values()) {
+            for (Method m : this.mappings.values()) {
                 Object object = invoke(m, entity);
-                if (object != null) {
-                    if (persistenceAnnotationInspector.hasTableAnnotation(object.getClass())) {
-                        Long id = (Long) getIdValue(persistenceAnnotationInspector, object);
-                        Preconditions.checkState(id != null, "@Id for [%s] is null", object);
-                        object = id;
-                    }
-                    if (object instanceof Date) {
-                        infileRow.append((Date) object, m);
-                    }
-                    else if (object instanceof Boolean) {
-                        infileRow.append((Boolean) object);
-                    }
-                    else if (object instanceof byte[]) {
-                        infileRow.append(encodeHexString((byte[]) object));
-                    }
-                    else if (object.getClass().isEnum()) {
-                        infileRow.append(getEnumValueToAppend(m, (Enum <?>) object));
-                    }
-                    else if (object instanceof Float) {
-                        Column column = this.persistenceAnnotationInspector.findAnnotation(m, Column.class);
-                        if (column != null) {
-                            int precision = column.precision();
-                            int scale = column.scale();
-                            if (precision > 0 && scale > 0) {
-                                infileRow.append((Float) object, precision, scale);
-                                continue;
-                            }
+                if (object == null) {
+                    infileRow.appendNull();
+                    continue;
+                }
+                if (this.persistenceAnnotationInspector.hasTableAnnotation(object.getClass())) {
+                    Long id = (Long) getIdValue(this.persistenceAnnotationInspector, object);
+                    Preconditions.checkState(id != null, "@Id for [%s] is null", object);
+                    assert id != null;
+                    object = id;
+                }
+                if (object instanceof Date) {
+                    infileRow.append((Date) object, m);
+                }
+                else if (object instanceof Boolean) {
+                    infileRow.append((Boolean) object);
+                }
+                else if (object instanceof byte[]) {
+                    infileRow.append(encodeHexString((byte[]) object));
+                }
+                else if (object instanceof Enum) {
+                    infileRow.append(getEnumValueToAppend(m, (Enum <?>) object));
+                }
+                else if (object instanceof Float) {
+                    Column column = this.persistenceAnnotationInspector.findAnnotation(m, Column.class);
+                    if (column != null) {
+                        int precision = column.precision();
+                        int scale = column.scale();
+                        if (precision > 0 && scale > 0) {
+                            infileRow.append((Float) object, precision, scale);
+                            continue;
                         }
-                        infileRow.append(object);
                     }
-                    else {
-                        infileRow.append(object);
-                    }
+                    infileRow.append(object);
                 }
                 else {
-                    infileRow.appendNull();
+                    infileRow.append(object);
                 }
             }
-            for (Map.Entry<Method, SingleInfileObjectLoader<Object>> entry : embeds.entrySet()) {
+            for (Map.Entry<Method, SingleInfileObjectLoader<Object>> entry : this.embeds.entrySet()) {
                 Object object = invoke(entry.getKey(), entity);
                 entry.getValue().convertToInfileRow(object, infileRow);
             }
@@ -120,14 +119,15 @@ public class SingleInfileObjectLoader<E> extends InfileObjectLoader<E> {
      * and if it's an {@link EnumType#STRING} to use the {@link Enum#name()}, otherwise use {@link Enum#ordinal()} as specified
      * in the {@link Enumerated} documentation.
      *
+     * Visible for testing.
+     *
      * @param method the method that returned the {@code enumObject}
      * @param enumObject the enum object that is being appended
      * @return the enum value to append
      */
-    @VisibleForTesting
     Object getEnumValueToAppend(Method method, Enum<?> enumObject) {
         Enumerated enumerated = method.getAnnotation(Enumerated.class);
-        if(enumerated != null && enumerated.value() == EnumType.STRING) {
+        if (enumerated != null && enumerated.value() == EnumType.STRING) {
             return enumObject.name();
         }
 
@@ -139,12 +139,13 @@ public class SingleInfileObjectLoader<E> extends InfileObjectLoader<E> {
         long start = System.nanoTime();
         super.flush();
         logger.debug("Elapsed time to flush [{}] to database {}ms",
-                     aClass, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start));
+                this.aClass, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start));
     }
 
     private void generateAndSetId(E e) {
-        if (autoGenerateId) {
-            setIdValue(persistenceAnnotationInspector, e, ++autoGeneratedId);
+        if (this.autoGenerateId) {
+            this.autoGeneratedId++;
+            setIdValue(this.persistenceAnnotationInspector, e, this.autoGeneratedId);
         }
     }
 
@@ -162,29 +163,41 @@ public class SingleInfileObjectLoader<E> extends InfileObjectLoader<E> {
     }
 
     Collection<String> getAllColumns() {
-        Set<String> columns = newLinkedHashSet(mappings.keySet());
-        for (SingleInfileObjectLoader<Object> loader : embeds.values()) {
+        Set<String> columns = new LinkedHashSet<>(this.mappings.keySet());
+        for (SingleInfileObjectLoader<Object> loader : this.embeds.values()) {
             columns.addAll(loader.getAllColumns());
         }
         return columns;
     }
 
-    @VisibleForTesting
+    /**
+     * Visible for testing.
+     * @return the mappings for this object loader
+     */
     Map<String, Method> getMappings() {
-        return mappings;
+        return this.mappings;
     }
 
-    @VisibleForTesting
+    /**
+     * Visible for testing.
+     * @return the embeds for this object loader
+     */
     Map<Method, SingleInfileObjectLoader<Object>> getEmbeds() {
-        return embeds;
+        return this.embeds;
     }
 
-    @VisibleForTesting
+    /**
+     * Visible for testing.
+     * @return whether this loader should auto-generate an ID
+     */
     boolean isAutoGenerateId() {
-        return autoGenerateId;
+        return this.autoGenerateId;
     }
 
-    @VisibleForTesting
+    /**
+     * Visible for testing.
+     * @return the infile data buffer
+     */
     InfileDataBuffer getInfileDataBuffer() {
         return infileDataBuffer;
     }

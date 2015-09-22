@@ -31,7 +31,7 @@ import static junit.framework.Assert.assertEquals;
  * @author amir.raminfar
  */
 @IfProfileValue(name = "performance", value = "true")
-public class IntPerformanceHierarchicalInfileObjectLoaderTest extends AbstractIntTestForJPile {
+public class IntTestPerformanceHierarchicalInfileObjectLoader extends AbstractIntTestForJPile {
     private static final String CUSTOMER_SQL = "insert into customer (last_seen_on, type) values (?, ?)";
     private static final String SUPPLIER_SQL = "insert supplier (name, street_number, street, city, state, zip_code) " +
             "values (?, ?, ?, ?, ?, ?)";
@@ -56,7 +56,8 @@ public class IntPerformanceHierarchicalInfileObjectLoaderTest extends AbstractIn
 
     @After
     public void assertNumberOfCustomer() {
-        assertEquals(CUSTOMERS_TO_GENERATE, jdbcTemplate.queryForInt("select count(*) from customer"));
+        Integer numCustomers = jdbcTemplate.queryForObject("select count(*) from customer", Integer.class);
+        assertEquals(CUSTOMERS_TO_GENERATE, numCustomers.intValue());
     }
 
     @Test
@@ -115,7 +116,6 @@ public class IntPerformanceHierarchicalInfileObjectLoaderTest extends AbstractIn
         phoneStatement.close();
     }
 
-
     @Test
     public void testWithHibernate() {
         final SessionFactory sessionFactory = new Configuration().configure()
@@ -124,7 +124,6 @@ public class IntPerformanceHierarchicalInfileObjectLoaderTest extends AbstractIn
                                                                  .addAnnotatedClass(Product.class)
                                                                  .addAnnotatedClass(Supplier.class)
                                                                  .buildSessionFactory();
-
 
         doWithInTimedBlock(new Runnable() {
             public void run() {

@@ -1,6 +1,5 @@
 package com.opower.persistence.jpile.reflection;
 
-
 import org.junit.Test;
 
 import static junit.framework.Assert.assertEquals;
@@ -17,7 +16,6 @@ public class CachedProxyTest {
 
     private MyTestClass theImplementation = new MyTestClass();
     private MyTestClass cached = CachedProxy.create(theImplementation);
-
 
     @Test
     public void testWithVarArray() {
