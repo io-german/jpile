@@ -5,7 +5,6 @@ import com.mchange.v2.c3p0.C3P0ProxyStatement;
 import com.opower.persistence.jpile.infile.InfileStatementCallback;
 
 import java.io.InputStream;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -42,17 +41,11 @@ public class C3P0JdbcDriverSupport implements InfileStatementCallback.JdbcDriver
     @Override
     public void doWithStatement(Statement statement, InputStream inputStream) throws SQLException {
         try {
-            Method m = com.mysql.jdbc.Statement.class.getMethod(INFILE_MUTATOR_METHOD, new Class[]{InputStream.class});
+            Method m = com.mysql.jdbc.Statement.class.getMethod(INFILE_MUTATOR_METHOD, InputStream.class);
             C3P0ProxyStatement proxyStatement = (C3P0ProxyStatement) statement;
             proxyStatement.rawStatementOperation(m, C3P0ProxyStatement.RAW_STATEMENT, new Object[]{inputStream});
         }
-        catch (NoSuchMethodException e) {
-            throw Throwables.propagate(e);
-        }
-        catch (IllegalAccessException e) {
-            throw Throwables.propagate(e);
-        }
-        catch (InvocationTargetException e) {
+        catch (ReflectiveOperationException e) {
             throw Throwables.propagate(e);
         }
     }

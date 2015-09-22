@@ -42,7 +42,6 @@ public class Product {
     private Packaging packaging;
     private Supplier supplier;
 
-
     @ManyToOne
     @JoinColumn(name = "customer_id")
     public Customer getCustomer() {

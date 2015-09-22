@@ -2,6 +2,7 @@ package com.opower.persistence.jpile.infile;
 
 import com.google.common.base.Throwables;
 import com.google.common.io.CharStreams;
+import org.joda.time.DateTime;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -26,7 +27,7 @@ public class InfileDataBufferTest {
     private static final String TIMESTAMP_STRING = "2000-01-10 08:00:01";
     private static final String DATE_STRING = "2000-01-10";
     private static final String TIME_STRING = "08:00:01";
-    private static final Date TEST_DATE = new Date(100, 0 , 10, 8 , 0, 1);
+    private static final Date TEST_DATE = DateTime.parse("2000-01-10T08:00:01").toDate();
 
     @Before
     public void setUp() {
@@ -128,30 +129,30 @@ public class InfileDataBufferTest {
 
     @Test(expected = NullPointerException.class)
     public void testTemporalAnnotationTestClass() throws NoSuchMethodException {
-        this.infileDataBuffer.append(TEST_DATE, TemporalAnnotationTestClass.class.getMethod("getDate", null));
+        this.infileDataBuffer.append(TEST_DATE, TemporalAnnotationTestClass.class.getMethod("getDate"));
     }
 
     @Test
     public void testTemporalDateAnnotation() throws NoSuchMethodException {
-        this.infileDataBuffer.append(TEST_DATE, TemporalAnnotationTestClass.class.getMethod("getDateWithTemporal", null));
+        this.infileDataBuffer.append(TEST_DATE, TemporalAnnotationTestClass.class.getMethod("getDateWithTemporal"));
         addRowAndAssertContents(DATE_STRING);
     }
 
     @Test
     public void testTemporalTimeAnnotation() throws NoSuchMethodException {
-        this.infileDataBuffer.append(TEST_DATE, TemporalAnnotationTestClass.class.getMethod("getTimeWithTemporal", null));
+        this.infileDataBuffer.append(TEST_DATE, TemporalAnnotationTestClass.class.getMethod("getTimeWithTemporal"));
         addRowAndAssertContents(TIME_STRING);
     }
 
     @Test
     public void testTemporalTimestampAnnotation() throws NoSuchMethodException {
-        this.infileDataBuffer.append(TEST_DATE, TemporalAnnotationTestClass.class.getMethod("getTimestampWithTemporal", null));
+        this.infileDataBuffer.append(TEST_DATE, TemporalAnnotationTestClass.class.getMethod("getTimestampWithTemporal"));
         addRowAndAssertContents(TIMESTAMP_STRING);
     }
 
     @Test
     public void testNullDateWithTemporal() throws NoSuchMethodException {
-        this.infileDataBuffer.append(null, TemporalAnnotationTestClass.class.getMethod("getTimestampWithTemporal", null));
+        this.infileDataBuffer.append(null, TemporalAnnotationTestClass.class.getMethod("getTimestampWithTemporal"));
         addRowAndAssertContents("\\N");
     }
 

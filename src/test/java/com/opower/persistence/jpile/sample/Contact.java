@@ -49,8 +49,8 @@ public class Contact {
         return this.contactPK;
     }
 
-    public void setContactPK(ContactPK contackPK) {
-        this.contactPK = contackPK;
+    public void setContactPK(ContactPK contactPK) {
+        this.contactPK = contactPK;
     }
 
     /**

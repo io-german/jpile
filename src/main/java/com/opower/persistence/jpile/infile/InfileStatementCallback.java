@@ -1,5 +1,6 @@
 package com.opower.persistence.jpile.infile;
 
+import com.google.common.collect.ImmutableList;
 import com.opower.persistence.jpile.infile.driver.C3P0JdbcDriverSupport;
 import com.opower.persistence.jpile.infile.driver.HikariJdbcDriverSupport;
 import com.opower.persistence.jpile.infile.driver.MysqlJdbcDriverSupport;
@@ -11,8 +12,6 @@ import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
-
-import static com.google.common.collect.ImmutableList.of;
 
 /**
  * Generic Spring callback for executing the 'LOAD DATA INFILE' pattern of streaming data in
@@ -37,7 +36,7 @@ import static com.google.common.collect.ImmutableList.of;
 public class InfileStatementCallback implements JdbcUtil.StatementCallback<List<Exception>> {
 
     private static final List<JdbcDriverSupport> SUPPORTED_DRIVERS =
-            of(new HikariJdbcDriverSupport(), new C3P0JdbcDriverSupport(), new MysqlJdbcDriverSupport());
+            ImmutableList.of(new HikariJdbcDriverSupport(), new C3P0JdbcDriverSupport(), new MysqlJdbcDriverSupport());
 
     // SQL statement
     private String loadInfileSql;
@@ -60,7 +59,7 @@ public class InfileStatementCallback implements JdbcUtil.StatementCallback<List<
         for (JdbcDriverSupport support : SUPPORTED_DRIVERS) {
             if (support.accept(statement)) {
                 support.doWithStatement(statement, this.inputStream);
-                statement.execute(loadInfileSql);
+                statement.execute(this.loadInfileSql);
                 return extractWarnings(statement.getWarnings());
             }
         }
@@ -74,7 +73,7 @@ public class InfileStatementCallback implements JdbcUtil.StatementCallback<List<
      * @return list of warnings
      */
     private List<Exception> extractWarnings(SQLWarning warning) {
-        List<Exception> warnings = new ArrayList<Exception>(1000);
+        List<Exception> warnings = new ArrayList<>(1000);
         while (warning != null) {
             warnings.add(warning);
             warning = warning.getNextWarning();
@@ -96,10 +95,10 @@ public class InfileStatementCallback implements JdbcUtil.StatementCallback<List<
         boolean accept(Statement statement);
 
         /**
-         * Sets the inputstream correctly on the statement
+         * Sets the input stream correctly on the statement
          *
          * @param statement   the statement
-         * @param inputStream the inputstream to set
+         * @param inputStream the input stream to set
          * @throws java.sql.SQLException if a sql exception occurs
          */
         void doWithStatement(Statement statement, InputStream inputStream) throws SQLException;

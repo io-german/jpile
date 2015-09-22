@@ -28,8 +28,9 @@
     </licenses>
 
     <properties>
-        <spring-version>3.1.2.RELEASE</spring-version>
+        <spring-version>3.2.6.RELEASE</spring-version>
         <slf4j-version>1.7.2</slf4j-version>
+        <findbugs-maven-version>3.0.1</findbugs-maven-version>
     </properties>
 
 
@@ -63,13 +64,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <configuration>
-                    <systemPropertyVariables>
-                        <!-- compile with -Dperformance=true to run IntPerformanceHierarchicalInfileObjectLoaderTest -->
-                        <propertyName>performance</propertyName>
-                        <buildDirectory>${performance}</buildDirectory>
-                    </systemPropertyVariables>
-                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -86,6 +80,23 @@
                         <phase>compile</phase>
                         <goals>
                             <goal>checkstyle</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>findbugs-maven-plugin</artifactId>
+                <version>${findbugs-maven-version}</version>
+                <configuration>
+                    <effort>Max</effort>
+                    <threshold>Medium</threshold>
+                    <xmlOutput>true</xmlOutput>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>check</goal>
                         </goals>
                     </execution>
                 </executions>
@@ -134,6 +145,14 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- Runtime Spring Context -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <version>${spring-version}</version>
+            <scope>runtime</scope>
+        </dependency>
+
         <!-- Drivers supported -->
         <dependency>
             <groupId>mysql</groupId>
@@ -169,6 +188,12 @@
         </dependency>
         <dependency>
             <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-core</artifactId>
+            <version>3.6.8.Final</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.hibernate</groupId>
             <artifactId>hibernate-entitymanager</artifactId>
             <version>3.6.8.Final</version>
             <scope>test</scope>
@@ -198,4 +223,14 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <reporting>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>findbugs-maven-plugin</artifactId>
+                <version>${findbugs-maven-version}</version>
+            </plugin>
+        </plugins>
+    </reporting>
 </project>

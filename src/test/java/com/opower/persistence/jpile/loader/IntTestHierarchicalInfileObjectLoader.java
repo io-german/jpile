@@ -32,7 +32,7 @@ import static org.mockito.Mockito.verify;
  *
  * @author amir.raminfar
  */
-public class IntHierarchicalInfileObjectLoaderTest extends AbstractIntTestForJPile {
+public class IntTestHierarchicalInfileObjectLoader extends AbstractIntTestForJPile {
     @Test
     public void testSingleCustomer() throws Exception {
         // Note, this SimpleDateFormat does NOT match the DATE_TIME_FORMATTER in the InfileDataBuffer.  The database
@@ -53,7 +53,7 @@ public class IntHierarchicalInfileObjectLoaderTest extends AbstractIntTestForJPi
         assertEquals(expected.getType().ordinal(), customer.get("type"));
         assertEquals(expected.getId(), customer.get("id"));
         assertEquals(expected.getId(), contact.get("customer_id"));
-        
+
         Contact expectedContact = Iterables.getOnlyElement(expected.getContacts());
         assertEquals(expectedContact.getContactPK().getFirstName(), contact.get("first_name"));
         assertEquals(expectedContact.getLastName(), contact.get("last_name"));

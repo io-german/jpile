@@ -135,7 +135,7 @@ public class HikariJdbcDriverSupportTest {
 
         @Override
         public int getFetchDirection() throws SQLException {
-            return 0;
+            return ResultSet.FETCH_FORWARD;
         }
 
         @Override
@@ -150,12 +150,12 @@ public class HikariJdbcDriverSupportTest {
 
         @Override
         public int getResultSetConcurrency() throws SQLException {
-            return 0;
+            return ResultSet.CONCUR_UPDATABLE;
         }
 
         @Override
         public int getResultSetType() throws SQLException {
-            return 0;
+            return ResultSet.TYPE_FORWARD_ONLY;
         }
 
         @Override

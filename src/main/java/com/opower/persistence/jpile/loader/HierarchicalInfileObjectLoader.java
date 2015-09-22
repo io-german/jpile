@@ -17,7 +17,6 @@ import javax.persistence.PrimaryKeyJoinColumn;
 import javax.persistence.SecondaryTable;
 import java.io.Closeable;
 import java.io.Flushable;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.sql.Connection;
@@ -57,7 +56,7 @@ import static com.google.common.collect.Sets.newHashSet;
  * @since 1.0
  */
 public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
-    private static Logger logger = LoggerFactory.getLogger(HierarchicalInfileObjectLoader.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(HierarchicalInfileObjectLoader.class);
 
     private PersistenceAnnotationInspector persistenceAnnotationInspector =
             CachedProxy.create(new PersistenceAnnotationInspector());
@@ -73,7 +72,6 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
     private Set<Class> classesToIgnore = ImmutableSet.of();
     private Set<String> secondaryClassesToIgnore = ImmutableSet.of();
     private boolean useReplace = false;
-
 
     /**
      * Disables fk (if not already disabled) and saves each object
@@ -91,9 +89,9 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
      * @param objects the objects to save
      */
     public void persist(Iterable<?> objects) {
-        Preconditions.checkNotNull(connection, "Connection is null, did you call setConnection()?");
+        Preconditions.checkNotNull(this.connection, "Connection is null, did you call setConnection()?");
         for (Object o : objects) {
-            persistWithCyclicCheck(o, new HashSet<Object>());
+            persistWithCyclicCheck(o, new HashSet<>());
         }
     }
 
@@ -102,17 +100,17 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
 
         // If we already saved this object then ignore
         if (cyclicCheck.contains(entity)) {
-            logger.debug("Skipping in file persist on [{}] because it has already been saved.", entity);
+            LOGGER.debug("Skipping in file persist on [{}] because it has already been saved.", entity);
             return;
         }
 
         // If we are supposed to ignore this class then also ignore
-        if (classesToIgnore.contains(entity.getClass())) {
-            logger.debug("Ignoring [{}].", entity);
+        if (this.classesToIgnore.contains(entity.getClass())) {
+            LOGGER.debug("Ignoring [{}].", entity);
             return;
         }
 
-        logger.debug("Persisting [{}].", entity);
+        LOGGER.debug("Persisting [{}].", entity);
 
         // Initialize for this class
         initForClass(entity.getClass());
@@ -121,7 +119,7 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
         cyclicCheck.add(entity);
 
         // Save dependent children first because there is a key that depends on these items
-        for (Method dependent : childDependent.get(entity.getClass())) {
+        for (Method dependent : this.childDependent.get(entity.getClass())) {
             Object o = invoke(dependent, entity);
             if (o != null) {
                 persistWithCyclicCheck(o, cyclicCheck);
@@ -130,14 +128,14 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
 
         // Save this entity now that we know all children have been saved
         callOnBeforeEvent(entity);
-        primaryObjectLoaders.get(entity.getClass()).add(entity);
+        this.primaryObjectLoaders.get(entity.getClass()).add(entity);
         callOnAfterEvent(entity);
 
         // Get generated id
-        Object id = PersistenceAnnotationInspector.getIdValue(persistenceAnnotationInspector, entity);
+        Object id = PersistenceAnnotationInspector.getIdValue(this.persistenceAnnotationInspector, entity);
 
         // Find all objects that depend entity's id being generated and save these now
-        for (Method dependent : parentDependent.get(entity.getClass())) {
+        for (Method dependent : this.parentDependent.get(entity.getClass())) {
             Object o = invoke(dependent, entity);
             if (o != null) {
                 if (o instanceof Collection) {
@@ -146,24 +144,25 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
                     }
                 }
                 else {
-                    PersistenceAnnotationInspector.setIdValue(persistenceAnnotationInspector, o, id);
+                    PersistenceAnnotationInspector.setIdValue(this.persistenceAnnotationInspector, o, id);
                     persistWithCyclicCheck(o, cyclicCheck);
                 }
             }
         }
 
         // Check to see if there is a secondary
-        if (secondaryTableObjectLoaders.containsKey(entity.getClass())) {
-            secondaryTableObjectLoaders.get(entity.getClass()).add(entity);
+        SingleInfileObjectLoader<Object> loader = this.secondaryTableObjectLoaders.get(entity.getClass());
+        if (loader != null) {
+            loader.add(entity);
         }
     }
 
     private void callOnBeforeEvent(Object entity) {
-        eventCallback.onBeforeSave(entity);
+        this.eventCallback.onBeforeSave(entity);
     }
 
     private void callOnAfterEvent(Object entity) {
-        eventCallback.onAfterSave(entity);
+        this.eventCallback.onAfterSave(entity);
     }
 
     private void initForClass(Class<?> aClass) {
@@ -173,47 +172,44 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
     }
 
     private void createObjectLoader(Class<?> aClass) {
-        if (primaryObjectLoaders.containsKey(aClass)) {
+        if (this.primaryObjectLoaders.containsKey(aClass)) {
             return;
         }
-        @SuppressWarnings("unchecked")
-        SingleInfileObjectLoader<Object> primaryLoader = new SingleInfileObjectLoaderBuilder<Object>((Class<Object>) aClass)
+        SingleInfileObjectLoader<Object> primaryLoader = new SingleInfileObjectLoaderBuilder<>(aClass)
                 .withBuffer(newInfileDataBuffer())
                 .withDefaultTableName()
-                .withJdbcConnection(connection)
-                .usingAnnotationInspector(persistenceAnnotationInspector)
-                .useReplace(useReplace)
+                .withJdbcConnection(this.connection)
+                .usingAnnotationInspector(this.persistenceAnnotationInspector)
+                .useReplace(this.useReplace)
                 .build();
 
-        primaryObjectLoaders.put(aClass, primaryLoader);
+        this.primaryObjectLoaders.put(aClass, primaryLoader);
 
-        for (SecondaryTable secondaryTable : persistenceAnnotationInspector.findSecondaryTables(aClass)) {
-            if (!secondaryClassesToIgnore.contains(secondaryTable.name())) {
-                @SuppressWarnings("unchecked")
+        for (SecondaryTable secondaryTable : this.persistenceAnnotationInspector.findSecondaryTables(aClass)) {
+            if (!this.secondaryClassesToIgnore.contains(secondaryTable.name())) {
                 SingleInfileObjectLoader<Object> secondaryLoader
-                        = new SingleInfileObjectLoaderBuilder<Object>((Class<Object>) aClass)
+                        = new SingleInfileObjectLoaderBuilder<>(aClass)
                         .withBuffer(newInfileDataBuffer())
                         .withDefaultTableName()
                         .usingSecondaryTable(secondaryTable)
-                        .withJdbcConnection(connection)
-                        .usingAnnotationInspector(persistenceAnnotationInspector)
-                        .useReplace(useReplace)
+                        .withJdbcConnection(this.connection)
+                        .usingAnnotationInspector(this.persistenceAnnotationInspector)
+                        .useReplace(this.useReplace)
                         .build();
 
-                secondaryTableObjectLoaders.put(aClass, secondaryLoader);
+                this.secondaryTableObjectLoaders.put(aClass, secondaryLoader);
             }
         }
     }
 
-
     private void findParentDependents(Class<?> aClass) {
-        if (parentDependent.containsKey(aClass)) {
+        if (this.parentDependent.containsKey(aClass)) {
             return;
         }
-        Set<Method> methods = newHashSet(persistenceAnnotationInspector.methodsAnnotatedWith(aClass, OneToMany.class));
-        methods.addAll(persistenceAnnotationInspector.methodsAnnotatedWith(aClass, OneToOne.class,
+        Set<Method> methods = newHashSet(this.persistenceAnnotationInspector.methodsAnnotatedWith(aClass, OneToMany.class));
+        methods.addAll(this.persistenceAnnotationInspector.methodsAnnotatedWith(aClass, OneToOne.class,
                                                                            PrimaryKeyJoinColumn.class));
-        parentDependent.put(aClass, methods.size() > 0 ? methods : ImmutableSet.<Method>of());
+        this.parentDependent.put(aClass, methods.size() > 0 ? methods : ImmutableSet.<Method>of());
 
         // Do all children again
         for (Method m : methods) {
@@ -222,21 +218,23 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
     }
 
     private void findChildDependents(Class<?> aClass) {
-        if (childDependent.containsKey(aClass)) {
+        if (this.childDependent.containsKey(aClass)) {
             return;
         }
 
-        Set<Method> methods = newHashSet(persistenceAnnotationInspector.methodsAnnotatedWith(aClass, ManyToOne.class));
-        methods.addAll(persistenceAnnotationInspector.methodsAnnotatedWith(aClass, new Predicate<Method>() {
+        Set<Method> methods = newHashSet(this.persistenceAnnotationInspector.methodsAnnotatedWith(aClass, ManyToOne.class));
+        methods.addAll(this.persistenceAnnotationInspector.methodsAnnotatedWith(aClass, new Predicate<Method>() {
             @Override
             public boolean apply(Method m) {
                 // Must have OneToOne but not PrimaryKeyJoinColumn annotations
-                return persistenceAnnotationInspector.hasAnnotation(m, OneToOne.class)
-                       && !persistenceAnnotationInspector.hasAnnotation(m, PrimaryKeyJoinColumn.class);
+                PersistenceAnnotationInspector annotationInspector =
+                        HierarchicalInfileObjectLoader.this.persistenceAnnotationInspector;
+                return annotationInspector.hasAnnotation(m, OneToOne.class)
+                       && !annotationInspector.hasAnnotation(m, PrimaryKeyJoinColumn.class);
             }
         }));
 
-        childDependent.put(aClass, methods.size() > 0 ? methods : ImmutableSet.<Method>of());
+        this.childDependent.put(aClass, methods.size() > 0 ? methods : ImmutableSet.<Method>of());
 
         // Do all children again
         for (Method m : methods) {
@@ -265,10 +263,7 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
         try {
             return method.invoke(target);
         }
-        catch (InvocationTargetException e) {
-            throw propagate(e);
-        }
-        catch (IllegalAccessException e) {
+        catch (ReflectiveOperationException e) {
             throw propagate(e);
         }
     }
@@ -278,11 +273,11 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
      */
     @Override
     public void flush() {
-        logger.debug("Flushing all object loaders.");
-        for (SingleInfileObjectLoader<?> loader : primaryObjectLoaders.values()) {
+        LOGGER.debug("Flushing all object loaders.");
+        for (SingleInfileObjectLoader<?> loader : this.primaryObjectLoaders.values()) {
             loader.flush();
         }
-        for (SingleInfileObjectLoader<?> loader : secondaryTableObjectLoaders.values()) {
+        for (SingleInfileObjectLoader<?> loader : this.secondaryTableObjectLoaders.values()) {
             loader.flush();
         }
     }
@@ -295,9 +290,9 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
     @Override
     public void close() {
         flush();
-        logger.debug("Closing all object loaders.");
-        primaryObjectLoaders.clear();
-        secondaryTableObjectLoaders.clear();
+        LOGGER.debug("Closing all object loaders.");
+        this.primaryObjectLoaders.clear();
+        this.secondaryTableObjectLoaders.clear();
         JdbcUtil.execute(this.connection, new JdbcUtil.StatementCallback<Boolean>() {
             @Override
             public Boolean doInStatement(Statement statement) throws SQLException {

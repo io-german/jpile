@@ -36,7 +36,7 @@ jPile allows the client to configure whether entities are updated when inserting
 
 # How do I run the tests?
 
-jPile needs a local MySQL running and Apache Maven. Create a new database schema called 'jpile' using `CREATE DATABASE jpile CHARACTER SET utf8 COLLATE utf8_general_ci`. The test classes use `root` with no password to login. The username and password is located in `AbstractIntTestForJPile` class. 
+jPile needs a local MySQL running and Apache Maven. Create a new database schema called 'jpile' using `CREATE DATABASE jpile CHARACTER SET utf8 COLLATE utf8_general_ci`. The test classes use `root` with no password to login. The username and password is located in `AbstractIntTestForJPile` class.
 
 All test cases will automatically create and drop the required tables for integration tests. After creating the local database, you should be able to run `mvn clean install` to run all the tests and install locally.
 
@@ -59,17 +59,12 @@ jPile is very easy to use. If you are using Maven, then add the following depend
 The most common use case is to create a new instance of `HierarchicalInfileObjectLoader`. You have to provide a valid database `Connection`. `HierarchicalInfileObjectLoader` doesn't rely on a database pool because it needs to disable foreign key constraints. Using multiple connections would fail because each new connection would have foreign key constraints enabled by default. Below shows how to do this.
 
 ```java
-Connection connection = ...;
-HierarchicalInfileObjectLoader hierarchicalInfileObjectLoader = new HierarchicalInfileObjectLoader();
-
-try {
-  hierarchicalInfileObjectLoader.setConnection(connection);
-  
-  hierarchicalInfileObjectLoader.persist(myEntity);
-  // Add more using persist()
-} finally {
-  hierarchicalInfileObjectLoader.close();
-  connection.close(); // Don't forget to close the connection
+try (Connection connection = ...;
+     HierarchicalInfileObjectLoader hierarchicalInfileObjectLoader = new HierarchicalInfileObjectLoader()
+) {
+    hierarchicalInfileObjectLoader.setConnection(connection);
+    hierarchicalInfileObjectLoader.persist(myEntity);
+    // Add more using persist()
 }
 ```
 
@@ -84,9 +79,21 @@ By running the performance test: ```mvn clean install -Dperformance```
 25,000 fake objects were created. Each object has a Customer, Contact (One-to-one) and 4 Products (One-to-many) which have a Supplier (Many-to-one). All these objects were saved using simple MySQL prepared statements, Hibernate, and jPile. The results were as follows:
 
 * Prepared Statements - 60s
-* Hibernate - 40s                     
+* Hibernate - 40s
 * jPile - 6s
 
 ## Performance Graph
 
 ![Performance Graph](http://i.imgur.com/2yiT2.jpg)
+
+# FindBugs
+
+jPile uses the FindBugs tool to perform various static analysis checks.
+FindBugs is run automatically when `mvn verify` is run.
+You can run `mvn site` and look at the generated `findbugs.html` to list any bugs found.
+
+FindBugs can also be configured in your IDE of choice.
+Maven is configured to use the following settings:
+
+- Analysis Effort: Maximal
+- Minimum Confidence to Report: Medium
