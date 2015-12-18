@@ -10,12 +10,12 @@ import javax.persistence.SecondaryTables;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 
+import com.google.common.collect.ImmutableList;
 import com.opower.persistence.jpile.sample.Contact;
 import com.opower.persistence.jpile.sample.Customer;
 import com.opower.persistence.jpile.sample.Product;
 import org.junit.Test;
 
-import static com.google.common.collect.ImmutableList.copyOf;
 import static junit.framework.Assert.assertNull;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -157,7 +157,7 @@ public class PersistenceAnnotationInspectorTest {
     @Test
     public void testFindSecondaryTableAnnotations() throws Exception {
         assertEquals(
-                copyOf(Contact.class.getAnnotation(SecondaryTables.class).value()),
+                ImmutableList.copyOf(Contact.class.getAnnotation(SecondaryTables.class).value()),
                 annotationInspector.findSecondaryTables(Contact.class)
         );
     }

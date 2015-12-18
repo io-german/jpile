@@ -2,6 +2,7 @@ package com.opower.persistence.jpile.loader;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.opower.persistence.jpile.infile.InfileDataBuffer;
 import com.opower.persistence.jpile.reflection.CachedProxy;
@@ -28,8 +29,6 @@ import java.util.Map;
 import java.util.Set;
 
 import static com.google.common.base.Throwables.propagate;
-import static com.google.common.collect.ImmutableList.copyOf;
-import static com.google.common.collect.ImmutableList.of;
 import static com.google.common.collect.Iterables.concat;
 import static com.google.common.collect.Maps.newHashMap;
 import static com.google.common.collect.Maps.newLinkedHashMap;
@@ -80,7 +79,7 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
      * @param moreObjects optional more objects
      */
     public void persist(Object firstObject, Object... moreObjects) {
-        persist(concat(of(firstObject), copyOf(moreObjects)));
+        persist(concat(ImmutableList.of(firstObject), ImmutableList.copyOf(moreObjects)));
     }
 
     /**

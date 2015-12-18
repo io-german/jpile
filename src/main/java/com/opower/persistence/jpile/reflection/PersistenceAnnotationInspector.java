@@ -17,8 +17,6 @@ import com.google.common.collect.Iterables;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.util.ReflectionUtils;
 
-import static com.google.common.collect.ImmutableList.copyOf;
-import static com.google.common.collect.ImmutableList.of;
 import static com.google.common.collect.Lists.newArrayList;
 
 /**
@@ -136,10 +134,10 @@ public class PersistenceAnnotationInspector {
         SecondaryTable secondaryTable = findAnnotation(aClass, SecondaryTable.class);
         SecondaryTables secondaryTables = findAnnotation(aClass, SecondaryTables.class);
         if (secondaryTables != null) {
-            annotations = copyOf(secondaryTables.value());
+            annotations = ImmutableList.copyOf(secondaryTables.value());
         }
         else if (secondaryTable != null) {
-            annotations = of(secondaryTable);
+            annotations = ImmutableList.of(secondaryTable);
         }
         return annotations;
     }
@@ -310,7 +308,7 @@ public class PersistenceAnnotationInspector {
      * @return the list of methods
      */
     public List<Method> methodsAnnotatedWith(Class<?> aClass, Predicate<Method> predicate) {
-        return newArrayList(Iterables.filter(copyOf(ReflectionUtils.getAllDeclaredMethods(aClass)), predicate));
+        return newArrayList(Iterables.filter(ImmutableList.copyOf(ReflectionUtils.getAllDeclaredMethods(aClass)), predicate));
     }
 
     /**

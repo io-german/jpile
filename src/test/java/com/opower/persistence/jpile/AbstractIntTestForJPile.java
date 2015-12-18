@@ -1,6 +1,7 @@
 package com.opower.persistence.jpile;
 
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.opower.persistence.jpile.loader.HierarchicalInfileObjectLoader;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -18,8 +19,6 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.util.List;
 
-import static com.google.common.collect.ImmutableList.of;
-
 /**
  * Abstract test case for all int tests. Loads MySQL drivers and creates a new MySQL {@link Connection}
  *
@@ -29,7 +28,8 @@ import static com.google.common.collect.ImmutableList.of;
 @ContextConfiguration
 public abstract class AbstractIntTestForJPile {
     private static final String JDBC_URL = "jdbc:mysql://localhost/jpile?useUnicode=true&characterEncoding=utf-8";
-    private static final List<String> TABLES = of("customer", "product", "contact", "contact_phone", "binary_data", "supplier");
+    private static final List<String> TABLES =
+            ImmutableList.of("customer", "product", "contact", "contact_phone", "binary_data", "supplier");
     private static final String DB_USER = "root";
     private static final String DB_PASSWORD = "";
 
