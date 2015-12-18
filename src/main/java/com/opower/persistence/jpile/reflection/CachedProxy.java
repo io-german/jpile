@@ -69,12 +69,12 @@ public final class CachedProxy {
     public static <T> T create(final T impl) {
         ProxyFactory factory = new ProxyFactory();
         factory.setSuperclass(impl.getClass());
-        Class cachedClass = factory.createClass();
+        @SuppressWarnings("unchecked")
+        Class<? extends T> cachedClass = factory.createClass();
         try {
-            @SuppressWarnings("unchecked")
-            T cachedInstance = (T) cachedClass.newInstance();
+            T cachedInstance = cachedClass.newInstance();
             ((ProxyObject) cachedInstance).setHandler(new MethodHandler() {
-                final LoadingCache<Args, Optional> cache = createCache(impl);
+                final LoadingCache<Args, Optional<Object>> cache = createCache(impl);
 
                 /**
                  * Returns the cached value of this method. If the method returns null then null is returned.
@@ -93,12 +93,12 @@ public final class CachedProxy {
         }
     }
 
-    private static LoadingCache<Args, Optional> createCache(final Object impl) {
+    private static LoadingCache<Args, Optional<Object>> createCache(final Object impl) {
         return CacheBuilder.newBuilder()
                            .softValues()
-                           .build(new CacheLoader<Args, Optional>() {
+                           .build(new CacheLoader<Args, Optional<Object>>() {
                                @Override
-                               public Optional load(@Nonnull Args key)
+                               public Optional<Object> load(@Nonnull Args key)
                                        throws InvocationTargetException, IllegalAccessException {
                                    return Optional.fromNullable(key.method.invoke(impl, key.args));
                                }

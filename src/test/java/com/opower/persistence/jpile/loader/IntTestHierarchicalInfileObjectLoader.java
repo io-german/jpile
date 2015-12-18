@@ -144,8 +144,19 @@ public class IntTestHierarchicalInfileObjectLoader extends AbstractIntTestForJPi
     }
 
     @Test
-    public void testIgnore() {
+    @SuppressWarnings({"rawtypes", "deprecation"}) // Testing deprecated method
+    public void testClassesToIgnore() {
         this.hierarchicalInfileObjectLoader.setClassesToIgnore(ImmutableSet.<Class>of(Customer.class));
+
+        Customer customer = ObjectFactory.newCustomer();
+        this.hierarchicalInfileObjectLoader.persist(customer);
+
+        assertNull(customer.getId());
+    }
+
+    @Test
+    public void testIgnoredClasses() {
+        this.hierarchicalInfileObjectLoader.setIgnoredClasses(ImmutableSet.<Class<?>>of(Customer.class));
 
         Customer customer = ObjectFactory.newCustomer();
         this.hierarchicalInfileObjectLoader.persist(customer);

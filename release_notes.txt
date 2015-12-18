@@ -2,6 +2,7 @@ New in 1.7.12
     Many minor code improvements
     Minor fixes for performance test
     Now uses Spring 3.2.6
+    Added `HierarchicalInfileObjectLoader#setIgnoredClasses`; deprecated `HierarchicalInfileObjectLoader#setClassesToIgnore`
 
 New in 1.7.11
     Added greater precision when persisting float values
