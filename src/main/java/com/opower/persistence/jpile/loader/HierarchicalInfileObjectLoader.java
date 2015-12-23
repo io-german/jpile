@@ -2,6 +2,7 @@ package com.opower.persistence.jpile.loader;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.opower.persistence.jpile.infile.InfileDataBuffer;
 import com.opower.persistence.jpile.reflection.CachedProxy;
@@ -28,8 +29,6 @@ import java.util.Map;
 import java.util.Set;
 
 import static com.google.common.base.Throwables.propagate;
-import static com.google.common.collect.ImmutableList.copyOf;
-import static com.google.common.collect.ImmutableList.of;
 import static com.google.common.collect.Iterables.concat;
 import static com.google.common.collect.Maps.newHashMap;
 import static com.google.common.collect.Maps.newLinkedHashMap;
@@ -69,7 +68,7 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
     private Map<Class<?>, SingleInfileObjectLoader<Object>> secondaryTableObjectLoaders = newLinkedHashMap();
     private Map<Class<?>, Set<Method>> parentDependent = newHashMap();
     private Map<Class<?>, Set<Method>> childDependent = newHashMap();
-    private Set<Class> classesToIgnore = ImmutableSet.of();
+    private Set<Class<?>> classesToIgnore = ImmutableSet.of();
     private Set<String> secondaryClassesToIgnore = ImmutableSet.of();
     private boolean useReplace = false;
 
@@ -80,7 +79,7 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
      * @param moreObjects optional more objects
      */
     public void persist(Object firstObject, Object... moreObjects) {
-        persist(concat(of(firstObject), copyOf(moreObjects)));
+        persist(concat(ImmutableList.of(firstObject), ImmutableList.copyOf(moreObjects)));
     }
 
     /**
@@ -230,7 +229,7 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
                 PersistenceAnnotationInspector annotationInspector =
                         HierarchicalInfileObjectLoader.this.persistenceAnnotationInspector;
                 return annotationInspector.hasAnnotation(m, OneToOne.class)
-                       && !annotationInspector.hasAnnotation(m, PrimaryKeyJoinColumn.class);
+                        && !annotationInspector.hasAnnotation(m, PrimaryKeyJoinColumn.class);
             }
         }));
 
@@ -242,17 +241,15 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
         }
     }
 
-    private Class getReturnType(Method m) {
-        final Class returnType;
+    private Class<?> getReturnType(Method m) {
         if (m.getGenericReturnType() instanceof ParameterizedType) {
             // For List<String> etc...
             ParameterizedType type = (ParameterizedType) m.getGenericReturnType();
-            returnType = (Class) type.getActualTypeArguments()[0];
+            return (Class<?>) type.getActualTypeArguments()[0];
         }
         else {
-            returnType = (Class) m.getGenericReturnType();
+            return (Class<?>) m.getGenericReturnType();
         }
-        return returnType;
     }
 
     private InfileDataBuffer newInfileDataBuffer() {
@@ -314,8 +311,29 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
         });
     }
 
+    /**
+     * This method is deprecated.
+     *
+     * @param classToIgnore classes to ignore
+     * @deprecated due to improper type handling; use {@link #setIgnoredClasses(Set)} instead.
+     */
+    @SuppressWarnings("rawtypes") // For legacy compatibility
+    @Deprecated
     public void setClassesToIgnore(Set<Class> classToIgnore) {
-        this.classesToIgnore = classToIgnore;
+        ImmutableSet.Builder<Class<?>> typedClassesToIgnore = ImmutableSet.builder();
+        for (Class untypedClass : classToIgnore) {
+            typedClassesToIgnore.add(untypedClass);
+        }
+        setIgnoredClasses(typedClassesToIgnore.build());
+    }
+
+    /**
+     * Set the classes to ignore.
+     * @param classesToIgnore classes to ignore
+     * @since 1.7.12
+     */
+    public void setIgnoredClasses(Set<Class<?>> classesToIgnore) {
+        this.classesToIgnore = classesToIgnore;
     }
 
     public void setSecondaryClassesToIgnore(Set<String> secondaryClassesToIgnore) {

@@ -21,7 +21,7 @@ public class C3P0JdbcDriverSupport implements InfileStatementCallback.JdbcDriver
     // of the method on the MySQL statement that we invoke via reflection.
     private static final String INFILE_MUTATOR_METHOD = "setLocalInfileInputStream";
 
-    private static Class targetInterface;
+    private static Class<?> targetInterface;
 
     static {
         try {

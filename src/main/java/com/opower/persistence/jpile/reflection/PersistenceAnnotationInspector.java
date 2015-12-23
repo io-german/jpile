@@ -17,8 +17,6 @@ import com.google.common.collect.Iterables;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.util.ReflectionUtils;
 
-import static com.google.common.collect.ImmutableList.copyOf;
-import static com.google.common.collect.ImmutableList.of;
 import static com.google.common.collect.Lists.newArrayList;
 
 /**
@@ -136,10 +134,10 @@ public class PersistenceAnnotationInspector {
         SecondaryTable secondaryTable = findAnnotation(aClass, SecondaryTable.class);
         SecondaryTables secondaryTables = findAnnotation(aClass, SecondaryTables.class);
         if (secondaryTables != null) {
-            annotations = copyOf(secondaryTables.value());
+            annotations = ImmutableList.copyOf(secondaryTables.value());
         }
         else if (secondaryTable != null) {
-            annotations = of(secondaryTable);
+            annotations = ImmutableList.of(secondaryTable);
         }
         return annotations;
     }
@@ -202,7 +200,7 @@ public class PersistenceAnnotationInspector {
         Preconditions.checkNotNull(getter, "Cannot find setter from null getter");
         checkGetterPreconditions(getter);
 
-        Class aClass = getter.getDeclaringClass();
+        Class<?> aClass = getter.getDeclaringClass();
         String getterPrefix = getGetterPrefix(getter);
 
         String setterName = getter.getName().replaceFirst(getterPrefix, SETTER_PREFIX);
@@ -221,7 +219,7 @@ public class PersistenceAnnotationInspector {
         Preconditions.checkState(setter.getParameterTypes().length == 1, "Setter must have just one parameter");
         Preconditions.checkState(setter.getName().startsWith(SETTER_PREFIX), "Setter must start with %s", SETTER_PREFIX);
 
-        Class aClass = setter.getDeclaringClass();
+        Class<?> aClass = setter.getDeclaringClass();
 
         Method getter = ReflectionUtils.findMethod(aClass, setter.getName().replaceFirst(SETTER_PREFIX, GETTER_PREFIX));
 
@@ -242,7 +240,7 @@ public class PersistenceAnnotationInspector {
     public Field fieldFromGetter(Method getter) {
         Preconditions.checkNotNull(getter, "Cannot find field from null getter");
         checkGetterPreconditions(getter);
-        Class aClass = getter.getDeclaringClass();
+        Class<?> aClass = getter.getDeclaringClass();
 
         String getterName = getter.getName();
         String getterPrefix = getGetterPrefix(getter);
@@ -310,7 +308,7 @@ public class PersistenceAnnotationInspector {
      * @return the list of methods
      */
     public List<Method> methodsAnnotatedWith(Class<?> aClass, Predicate<Method> predicate) {
-        return newArrayList(Iterables.filter(copyOf(ReflectionUtils.getAllDeclaredMethods(aClass)), predicate));
+        return newArrayList(Iterables.filter(ImmutableList.copyOf(ReflectionUtils.getAllDeclaredMethods(aClass)), predicate));
     }
 
     /**

@@ -3,6 +3,7 @@ package com.opower.persistence.jpile.infile;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableSet;
 import com.opower.persistence.jpile.reflection.CachedProxy;
 import com.opower.persistence.jpile.reflection.PersistenceAnnotationInspector;
 import org.joda.time.format.DateTimeFormat;
@@ -25,7 +26,6 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.collect.ImmutableSet.of;
 
 /**
  * A buffer used to collect data in MySQL's infile format. This buffer also maintains a separate row buffer
@@ -62,8 +62,14 @@ public class InfileDataBuffer implements InfileRow {
     protected static final String MYSQL_NULL_STRING = MYSQL_ESCAPE_CHAR + "N";
     // List of bytes that will need escaping as they hold special meaning to MYSQL
     // See http://dev.mysql.com/doc/refman/5.1/en/load-data.html
-    protected static final Set<Byte> BYTES_NEEDING_ESCAPING =
-            of((byte) '\0', (byte) '\b', (byte) '\n', (byte) '\r', (byte) '\t', (byte) MYSQL_ESCAPE_CHAR, (byte) 26);
+    protected static final Set<Byte> BYTES_NEEDING_ESCAPING = ImmutableSet.of(
+            (byte) '\0',
+            (byte) '\b',
+            (byte) '\n',
+            (byte) '\r',
+            (byte) '\t',
+            (byte) MYSQL_ESCAPE_CHAR,
+            (byte) 26);
     private static final String TEMPORAL_TYPE_EXCEPTION =
             "The Temporal.value should be TemporalType.DATE, TemporalType.TIME, or TemporalType.TIMESTAMP on method [%s]";
     // This Pattern matches on all of the BYTES_NEEDING_ESCAPING
