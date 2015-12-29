@@ -68,6 +68,16 @@ try (Connection connection = ...;
 }
 ```
 
+In order to get events about loading process use `HierarchicalInfileObjectLoader.subscribe()` and otherwise `HierarchicalInfileObjectLoader.unsubscribe()` to stop receiving events.
+Listener should have have public method that accepts appropriate event as argument and marked by `@Subscribe` annotation.
+```java
+public class Listener {
+    @Subscribe public void handle(SaveEntityEvent event) { /* handler code for SaveEntityEvent events  */ }
+    @Subscribe public void handle(FlushEvent event) { /* handler code for FlushEvent events */ }
+}
+```
+Refer to [documentation](https://github.com/google/guava/wiki/EventBusExplained) to get more information.
+
 # What license is jPile released under?
 
 jPile is released on the MIT license which is available in `license.txt` to read.

@@ -4,6 +4,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.eventbus.EventBus;
 import com.opower.persistence.jpile.infile.InfileDataBuffer;
 import com.opower.persistence.jpile.reflection.PersistenceAnnotationInspector;
 import com.opower.persistence.jpile.util.JdbcUtil;
@@ -27,6 +28,8 @@ import java.sql.Statement;
 import java.util.Collection;
 import java.util.Map;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 /**
  * The builder for creating a SingleInfileObjectLoader. This class does the building and parsing of the annotations.
  *
@@ -35,7 +38,9 @@ import java.util.Map;
  * @see SingleInfileObjectLoader
  */
 public class SingleInfileObjectLoaderBuilder<E> {
-    private Class<? extends E> aClass;
+
+    private final EventBus eventBus;
+    private final Class<? extends E> aClass;
     private Connection connection;
     private InfileDataBuffer infileDataBuffer;
     private PersistenceAnnotationInspector annotationInspector;
@@ -46,9 +51,9 @@ public class SingleInfileObjectLoaderBuilder<E> {
     private boolean useReplace = false;
     private SecondaryTable secondaryTable;
 
-    public SingleInfileObjectLoaderBuilder(Class<? extends E> aClass) {
-        Preconditions.checkNotNull(aClass, "Class cannot be null");
-        this.aClass = aClass;
+    public SingleInfileObjectLoaderBuilder(Class<? extends E> aClass, EventBus eventBus) {
+        this.aClass = checkNotNull(aClass, "Class cannot be null");
+        this.eventBus = checkNotNull(eventBus, "Event bus cannot be null");
     }
 
     public SingleInfileObjectLoaderBuilder<E> withBuffer(InfileDataBuffer infileDataBuffer) {
@@ -108,11 +113,11 @@ public class SingleInfileObjectLoaderBuilder<E> {
      * @return a new instance of object loader
      */
     public SingleInfileObjectLoader<E> build() {
-        Preconditions.checkNotNull(this.connection, "connection cannot be null");
-        Preconditions.checkNotNull(this.annotationInspector, "persistenceAnnotationInspector cannot be null");
-        Preconditions.checkNotNull(this.infileDataBuffer, "infileDataBuffer cannot be null");
+        checkNotNull(this.connection, "connection cannot be null");
+        checkNotNull(this.annotationInspector, "persistenceAnnotationInspector cannot be null");
+        checkNotNull(this.infileDataBuffer, "infileDataBuffer cannot be null");
 
-        SingleInfileObjectLoader<E> objectLoader = new SingleInfileObjectLoader<>(this.aClass);
+        SingleInfileObjectLoader<E> objectLoader = new SingleInfileObjectLoader<>(this.aClass, this.eventBus);
         objectLoader.connection = this.connection;
         objectLoader.infileDataBuffer = this.infileDataBuffer;
         objectLoader.persistenceAnnotationInspector = this.annotationInspector;
@@ -126,7 +131,7 @@ public class SingleInfileObjectLoaderBuilder<E> {
                 this.tableName = this.secondaryTable.name();
             }
         }
-        Preconditions.checkNotNull(this.tableName, "tableName cannot be null");
+        objectLoader.tableName = checkNotNull(this.tableName, "tableName cannot be null");
         this.findAnnotations(objectLoader);
         if (!this.embedded) {
             String idColumnName = findPrimaryIdColumnName(objectLoader);
@@ -177,7 +182,7 @@ public class SingleInfileObjectLoaderBuilder<E> {
                     this.annotationInspector.annotatedMethodsWith(this.aClass, EmbeddedId.class))) {
                 Method method = annotatedMethod.getMethod();
                 SingleInfileObjectLoader<Object> embeddedObjectLoader
-                        = new SingleInfileObjectLoaderBuilder<>(method.getReturnType())
+                        = new SingleInfileObjectLoaderBuilder<>(method.getReturnType(), this.eventBus)
                         .withBuffer(this.infileDataBuffer)
                         .withDefaultTableName()
                         .withJdbcConnection(this.connection)
