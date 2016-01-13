@@ -22,7 +22,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.springframework.test.annotation.IfProfileValue;
 
-import static junit.framework.Assert.assertEquals;
+import static org.junit.Assert.assertEquals;
 
 /**
  * Tests the performance of MySQL with prepared statements and Hibernate. This test is disabled by default because it
