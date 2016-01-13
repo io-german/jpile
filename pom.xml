@@ -16,7 +16,7 @@
         help.
     </description>
     <artifactId>jpile</artifactId>
-    <version>1.7.12-SNAPSHOT</version>
+    <version>1.8.0-SNAPSHOT</version>
     <url>https://github.com/opower/jpile</url>
 
     <licenses>

@@ -330,7 +330,7 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
     /**
      * Set the classes to ignore.
      * @param classesToIgnore classes to ignore
-     * @since 1.7.12
+     * @since 1.8.0
      */
     public void setIgnoredClasses(Set<Class<?>> classesToIgnore) {
         this.classesToIgnore = classesToIgnore;
