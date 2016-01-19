@@ -2,8 +2,8 @@ package com.opower.persistence.jpile.reflection;
 
 import org.junit.Test;
 
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertNull;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 /**
  * Test caching to make sure it works correctly

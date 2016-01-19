@@ -1,7 +1,11 @@
 package com.opower.persistence.jpile.reflection;
 
-import java.lang.reflect.Method;
-import java.util.List;
+import com.google.common.collect.ImmutableList;
+import com.opower.persistence.jpile.sample.Contact;
+import com.opower.persistence.jpile.sample.Customer;
+import com.opower.persistence.jpile.sample.Product;
+import org.junit.Test;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.OneToOne;
@@ -9,16 +13,12 @@ import javax.persistence.PrimaryKeyJoinColumn;
 import javax.persistence.SecondaryTables;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
+import java.lang.reflect.Method;
+import java.util.List;
 
-import com.google.common.collect.ImmutableList;
-import com.opower.persistence.jpile.sample.Contact;
-import com.opower.persistence.jpile.sample.Customer;
-import com.opower.persistence.jpile.sample.Product;
-import org.junit.Test;
-
-import static junit.framework.Assert.assertNull;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
