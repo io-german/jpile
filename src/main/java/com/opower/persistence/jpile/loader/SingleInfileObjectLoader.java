@@ -1,8 +1,11 @@
 package com.opower.persistence.jpile.loader;
 
 import com.google.common.base.Preconditions;
+import com.google.common.eventbus.EventBus;
 import com.opower.persistence.jpile.infile.InfileDataBuffer;
 import com.opower.persistence.jpile.infile.InfileRow;
+import com.opower.persistence.jpile.infile.events.EventFirePoint;
+import com.opower.persistence.jpile.infile.events.FlushEvent;
 import com.opower.persistence.jpile.reflection.PersistenceAnnotationInspector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,9 +48,13 @@ public class SingleInfileObjectLoader<E> extends InfileObjectLoader<E> {
     protected boolean allowNull = false;
     protected boolean autoGenerateId = false;
     protected boolean embedChild = false;
+    protected String tableName;
 
-    SingleInfileObjectLoader(Class<? extends E> aClass) {
+    protected final EventBus eventBus;
+
+    SingleInfileObjectLoader(Class<? extends E> aClass, EventBus eventBus) {
         this.aClass = aClass;
+        this.eventBus = eventBus;
     }
 
     /**
@@ -137,9 +144,12 @@ public class SingleInfileObjectLoader<E> extends InfileObjectLoader<E> {
     @Override
     public void flush() {
         long start = System.nanoTime();
+        this.eventBus.post(new FlushEvent(this, EventFirePoint.BEFORE, this.aClass, this.tableName, start));
         super.flush();
+        long end = System.nanoTime();
         logger.debug("Elapsed time to flush [{}] to database {}ms",
-                this.aClass, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start));
+                this.aClass, TimeUnit.NANOSECONDS.toMillis(end - start));
+        this.eventBus.post(new FlushEvent(this, EventFirePoint.AFTER, this.aClass, this.tableName, end));
     }
 
     private void generateAndSetId(E e) {

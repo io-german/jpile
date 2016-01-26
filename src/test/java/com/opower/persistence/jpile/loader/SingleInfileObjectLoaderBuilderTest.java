@@ -3,6 +3,7 @@ package com.opower.persistence.jpile.loader;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.eventbus.EventBus;
 import com.google.common.io.CharStreams;
 import com.mysql.jdbc.Statement;
 import com.opower.persistence.jpile.infile.InfileDataBuffer;
@@ -56,7 +57,7 @@ public class SingleInfileObjectLoaderBuilderTest {
         when(statement.executeQuery(anyString())).thenReturn(resultSet);
         when(connection.createStatement()).thenReturn(statement);
 
-        objectLoader = new SingleInfileObjectLoaderBuilder<>(Customer.class)
+        objectLoader = new SingleInfileObjectLoaderBuilder<>(Customer.class, new EventBus())
                 .withDefaultTableName()
                 .withJdbcConnection(connection)
                 .usingAnnotationInspector(new PersistenceAnnotationInspector())

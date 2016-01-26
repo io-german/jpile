@@ -4,7 +4,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.eventbus.EventBus;
 import com.opower.persistence.jpile.infile.InfileDataBuffer;
+import com.opower.persistence.jpile.infile.events.EventFirePoint;
+import com.opower.persistence.jpile.infile.events.SaveEntityEvent;
+import com.opower.persistence.jpile.infile.events.SaveEntityEventAdapter;
 import com.opower.persistence.jpile.reflection.CachedProxy;
 import com.opower.persistence.jpile.reflection.PersistenceAnnotationInspector;
 import com.opower.persistence.jpile.util.JdbcUtil;
@@ -55,12 +59,14 @@ import static com.google.common.collect.Sets.newHashSet;
  * @since 1.0
  */
 public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
+
     private static final Logger LOGGER = LoggerFactory.getLogger(HierarchicalInfileObjectLoader.class);
+    private static final String EVENT_BUS_IDENTIFIER = "jpile-event-bus";
 
     private PersistenceAnnotationInspector persistenceAnnotationInspector =
             CachedProxy.create(new PersistenceAnnotationInspector());
 
-    private CallBack eventCallback = new NoOpCallBack();
+    private EventBus eventBus = new EventBus(EVENT_BUS_IDENTIFIER);
     private Connection connection;
 
     // linked for consistent error message
@@ -126,9 +132,9 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
         }
 
         // Save this entity now that we know all children have been saved
-        callOnBeforeEvent(entity);
+        this.eventBus.post(new SaveEntityEvent(this, EventFirePoint.BEFORE, entity));
         this.primaryObjectLoaders.get(entity.getClass()).add(entity);
-        callOnAfterEvent(entity);
+        this.eventBus.post(new SaveEntityEvent(this, EventFirePoint.AFTER, entity));
 
         // Get generated id
         Object id = PersistenceAnnotationInspector.getIdValue(this.persistenceAnnotationInspector, entity);
@@ -156,14 +162,6 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
         }
     }
 
-    private void callOnBeforeEvent(Object entity) {
-        this.eventCallback.onBeforeSave(entity);
-    }
-
-    private void callOnAfterEvent(Object entity) {
-        this.eventCallback.onAfterSave(entity);
-    }
-
     private void initForClass(Class<?> aClass) {
         findParentDependents(aClass);
         findChildDependents(aClass);
@@ -174,7 +172,7 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
         if (this.primaryObjectLoaders.containsKey(aClass)) {
             return;
         }
-        SingleInfileObjectLoader<Object> primaryLoader = new SingleInfileObjectLoaderBuilder<>(aClass)
+        SingleInfileObjectLoader<Object> primaryLoader = new SingleInfileObjectLoaderBuilder<>(aClass, this.eventBus)
                 .withBuffer(newInfileDataBuffer())
                 .withDefaultTableName()
                 .withJdbcConnection(this.connection)
@@ -187,7 +185,7 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
         for (SecondaryTable secondaryTable : this.persistenceAnnotationInspector.findSecondaryTables(aClass)) {
             if (!this.secondaryClassesToIgnore.contains(secondaryTable.name())) {
                 SingleInfileObjectLoader<Object> secondaryLoader
-                        = new SingleInfileObjectLoaderBuilder<>(aClass)
+                        = new SingleInfileObjectLoaderBuilder<>(aClass, this.eventBus)
                         .withBuffer(newInfileDataBuffer())
                         .withDefaultTableName()
                         .usingSecondaryTable(secondaryTable)
@@ -340,8 +338,67 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
         this.secondaryClassesToIgnore = secondaryClassesToIgnore;
     }
 
+    /**
+     * This method is decommissioned.
+     * <br/>
+     * Use {@link #subscribe(Object)} method by passing listener object which has public method that
+     * marked by {@link com.google.common.eventbus.Subscribe} annotation and accepts {@link SaveEntityEvent}
+     * as argument. Example:
+     * <pre>
+     * {@code public class Listener {
+     *     @literal @Subscribe public void handle(SaveEntityEvent event) { }
+     *  }}
+     * </pre>
+     *
+     * @see #subscribe
+     * @see #unsubscribe
+     *
+     * @deprecated
+     */
+    @Deprecated
     public void setEventCallback(CallBack eventCallback) {
-        this.eventCallback = eventCallback;
+        subscribe(new SaveEntityEventAdapter(eventCallback));
+    }
+
+    /**
+     * Subscribes listener to the events stream.
+     * <br/>
+     * Listener object should have public method that marked by {@link com.google.common.eventbus.Subscribe} annotation
+     * and accepts needed event type as argument. Example:
+     * <pre>
+     * {@code public class Listener {
+     *     @literal @Subscribe public void handle(SaveEntityEvent event) { }
+     *     @literal @Subscribe public void handle(FlushEvent event) { }
+     *  }}
+     * </pre>
+     *
+     * @see EventBus#register(Object)
+     * @since 1.8.0
+     */
+    public void subscribe(Object listener) {
+        this.eventBus.register(listener);
+    }
+
+    /**
+     * Un-subscribes listener from the events stream.
+     *
+     * @see EventBus#unregister(Object)
+     * @since 1.8.0
+     */
+    public void unsubscribe(Object listener) {
+        this.eventBus.unregister(listener);
+    }
+
+    /**
+     * Sets event bus implementation.
+     *
+     * @see com.google.common.eventbus.EventBus
+     * @see com.google.common.eventbus.AsyncEventBus
+     *
+     * @since 1.8.0
+     */
+    public void setEventBus(EventBus eventBus) {
+        this.eventBus = eventBus;
     }
 
     /**
@@ -354,7 +411,10 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
 
     /**
      * An event interface that can be used to do perform actions before and after persisting objects
+     *
+     * @deprecated
      */
+    @Deprecated
     public interface CallBack {
         /**
          * Gets called before saving an object
