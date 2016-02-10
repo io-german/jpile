@@ -11,22 +11,22 @@ import com.opower.persistence.jpile.infile.events.SaveEntityEvent;
 import com.opower.persistence.jpile.infile.events.SaveEntityEventAdapter;
 import com.opower.persistence.jpile.reflection.CachedProxy;
 import com.opower.persistence.jpile.reflection.PersistenceAnnotationInspector;
-import com.opower.persistence.jpile.util.JdbcUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.retry.RetryPolicy;
+import org.springframework.retry.policy.NeverRetryPolicy;
 
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.PrimaryKeyJoinColumn;
 import javax.persistence.SecondaryTable;
+import javax.sql.DataSource;
 import java.io.Closeable;
 import java.io.Flushable;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
@@ -67,7 +67,8 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
             CachedProxy.create(new PersistenceAnnotationInspector());
 
     private EventBus eventBus = new EventBus(EVENT_BUS_IDENTIFIER);
-    private Connection connection;
+    private ConnectionHolder connectionHolder;
+    private RetryPolicy retryPolicy = new NeverRetryPolicy();
 
     // linked for consistent error message
     private Map<Class<?>, SingleInfileObjectLoader<Object>> primaryObjectLoaders = newLinkedHashMap();
@@ -94,7 +95,9 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
      * @param objects the objects to save
      */
     public void persist(Iterable<?> objects) {
-        Preconditions.checkNotNull(this.connection, "Connection is null, did you call setConnection()?");
+        Preconditions.checkNotNull(
+                this.connectionHolder, "ConnectionHolder is null, did you call setConnection() or setDataSource()?");
+
         for (Object o : objects) {
             persistWithCyclicCheck(o, new HashSet<>());
         }
@@ -175,7 +178,8 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
         SingleInfileObjectLoader<Object> primaryLoader = new SingleInfileObjectLoaderBuilder<>(aClass, this.eventBus)
                 .withBuffer(newInfileDataBuffer())
                 .withDefaultTableName()
-                .withJdbcConnection(this.connection)
+                .withConnectionHolder(this.connectionHolder)
+                .withRetryPolicy(this.retryPolicy)
                 .usingAnnotationInspector(this.persistenceAnnotationInspector)
                 .useReplace(this.useReplace)
                 .build();
@@ -189,7 +193,8 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
                         .withBuffer(newInfileDataBuffer())
                         .withDefaultTableName()
                         .usingSecondaryTable(secondaryTable)
-                        .withJdbcConnection(this.connection)
+                        .withConnectionHolder(this.connectionHolder)
+                        .withRetryPolicy(this.retryPolicy)
                         .usingAnnotationInspector(this.persistenceAnnotationInspector)
                         .useReplace(this.useReplace)
                         .build();
@@ -288,25 +293,22 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
         LOGGER.debug("Closing all object loaders.");
         this.primaryObjectLoaders.clear();
         this.secondaryTableObjectLoaders.clear();
-        JdbcUtil.execute(this.connection, new JdbcUtil.StatementCallback<Boolean>() {
-            @Override
-            public Boolean doInStatement(Statement statement) throws SQLException {
-                return statement.execute("SET FOREIGN_KEY_CHECKS = 1");
-            }
-        });
+        this.connectionHolder.resetCurrentConnection();
     }
 
-    /**
-     * Disables foreign key checks for this connection by executing {@code SET FOREIGN_KEY_CHECKS = 0}
-     */
     public void setConnection(Connection connection) {
-        this.connection = connection;
-        JdbcUtil.execute(this.connection, new JdbcUtil.StatementCallback<Boolean>() {
-            @Override
-            public Boolean doInStatement(Statement statement) throws SQLException {
-                return statement.execute("SET FOREIGN_KEY_CHECKS = 0");
-            }
-        });
+        Preconditions.checkNotNull(connection, "connection can't be null");
+        this.connectionHolder = new ConnectionHolder(connection);
+    }
+
+    public void setDataSource(DataSource dataSource) {
+        Preconditions.checkNotNull(dataSource, "dataSource can't be null");
+        this.connectionHolder = new ConnectionHolder(dataSource);
+    }
+
+    public void setRetryPolicy(RetryPolicy retryPolicy) {
+        Preconditions.checkNotNull(retryPolicy, "retryPolicy can't be null");
+        this.retryPolicy = retryPolicy;
     }
 
     /**

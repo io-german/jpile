@@ -59,7 +59,7 @@ public class SingleInfileObjectLoaderBuilderTest {
 
         objectLoader = new SingleInfileObjectLoaderBuilder<>(Customer.class, new EventBus())
                 .withDefaultTableName()
-                .withJdbcConnection(connection)
+                .withConnectionHolder(new ConnectionHolder(connection))
                 .usingAnnotationInspector(new PersistenceAnnotationInspector())
                 .withBuffer(new InfileDataBuffer())
                 .build();
