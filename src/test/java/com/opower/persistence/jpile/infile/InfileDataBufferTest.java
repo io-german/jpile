@@ -1,10 +1,13 @@
 package com.opower.persistence.jpile.infile;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.io.CharStreams;
 import org.joda.time.DateTime;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -13,6 +16,7 @@ import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.util.Date;
 
 import static org.junit.Assert.assertEquals;
@@ -29,9 +33,16 @@ public class InfileDataBufferTest {
     private static final String TIME_STRING = "08:00:01";
     private static final Date TEST_DATE = DateTime.parse("2000-01-10T08:00:01").toDate();
 
+    private final ExpectedException expectedException = ExpectedException.none();
+
+    @Rule
+    public ExpectedException getExpectedException() {
+        return this.expectedException;
+    }
+
     @Before
     public void setUp() {
-        this.infileDataBuffer = new InfileDataBuffer();
+        this.infileDataBuffer = InfileDataBuffer.builder().build();
     }
 
     @Test
@@ -172,6 +183,82 @@ public class InfileDataBufferTest {
     public void testFloatWithPrecisionAndScale3() {
         this.infileDataBuffer.append(16725.617f, 12, 3);
         addRowAndAssertContents("16725.617");
+    }
+
+    @Test
+    public void testCreateWithDefaultParams() {
+        InfileDataBuffer buffer = InfileDataBuffer.builder().build();
+
+        assertEquals(InfileDataBuffer.DEFAULT_CHARSET, buffer.getCharset());
+        assertEquals(InfileDataBuffer.DEFAULT_INFILE_BUFFER_SIZE, buffer.getInfileBufferSize());
+        assertEquals(InfileDataBuffer.DEFAULT_ROW_BUFFER_SIZE, buffer.getRowBufferSize());
+    }
+
+    @Test
+    public void testCreateWithCustomCharset() {
+        Charset charset = Charsets.UTF_16;
+
+        InfileDataBuffer buffer = InfileDataBuffer.builder().withCharset(charset).build();
+
+        assertEquals(charset, buffer.getCharset());
+    }
+
+    @Test
+    public void testCreateWithCustomBufferSizes() {
+        int infileBufferSize = 1024;
+        int rowBufferSize = 256;
+
+        InfileDataBuffer buffer = InfileDataBuffer.builder()
+                .withInfileBufferSize(infileBufferSize)
+                .withRowBufferSize(rowBufferSize)
+                .build();
+
+        assertEquals(buffer.getInfileBufferSize(), infileBufferSize);
+        assertEquals(buffer.getRowBufferSize(), rowBufferSize);
+    }
+
+    @Test
+    public void testCreateWithNegativeInfileBufferSize() {
+        this.expectedException.expect(IllegalArgumentException.class);
+        this.expectedException.expectMessage("infileBufferSize should be positive");
+
+        InfileDataBuffer.builder()
+                .withInfileBufferSize(-1024)
+                .build();
+    }
+
+    @Test
+    public void testCreateWithNegativeRowBufferSize() {
+        this.expectedException.expect(IllegalArgumentException.class);
+        this.expectedException.expectMessage("rowBufferSize should be positive");
+
+        InfileDataBuffer.builder()
+                .withRowBufferSize(-256)
+                .build();
+    }
+
+    @Test
+    public void testCreateWithInfileBufferSizeEqualToRowBufferSize() {
+        int bufferSize = 1024;
+
+        InfileDataBuffer buffer = InfileDataBuffer.builder()
+                .withInfileBufferSize(bufferSize)
+                .withRowBufferSize(bufferSize)
+                .build();
+
+        assertEquals(buffer.getInfileBufferSize(), bufferSize);
+        assertEquals(buffer.getRowBufferSize(), bufferSize);
+    }
+
+    @Test
+    public void testCreateWithInfileBufferSizeLessThanRowBufferSize() {
+        this.expectedException.expect(IllegalStateException.class);
+        this.expectedException.expectMessage("Cannot create a row buffer larger than the infile buffer.");
+
+        InfileDataBuffer.builder()
+                .withInfileBufferSize(256)
+                .withRowBufferSize(1024)
+                .build();
     }
 
     private void addRowAndAssertContents(String expected) {

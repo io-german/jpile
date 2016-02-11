@@ -36,6 +36,8 @@ import static com.google.common.collect.Iterables.concat;
 import static com.google.common.collect.Maps.newHashMap;
 import static com.google.common.collect.Maps.newLinkedHashMap;
 import static com.google.common.collect.Sets.newHashSet;
+import static com.opower.persistence.jpile.infile.InfileDataBuffer.DEFAULT_INFILE_BUFFER_SIZE;
+import static com.opower.persistence.jpile.infile.InfileDataBuffer.DEFAULT_ROW_BUFFER_SIZE;
 
 /**
  * Save any type of data using a collection of SingleInfileObjectLoaders. A common use case would be to do something like
@@ -67,6 +69,9 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
 
     private EventBus eventBus = new EventBus(EVENT_BUS_IDENTIFIER);
     private StatementExecutor statementExecutor;
+
+    private int infileBufferSize = DEFAULT_INFILE_BUFFER_SIZE;
+    private int rowBufferSize = DEFAULT_ROW_BUFFER_SIZE;
 
     // linked for consistent error message
     private Map<Class<?>, SingleInfileObjectLoader<Object>> primaryObjectLoaders = newLinkedHashMap();
@@ -252,7 +257,10 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
     }
 
     private InfileDataBuffer newInfileDataBuffer() {
-        return new InfileDataBuffer();
+        return InfileDataBuffer.builder()
+                .withInfileBufferSize(this.infileBufferSize)
+                .withRowBufferSize(this.rowBufferSize)
+                .build();
     }
 
     private Object invoke(Method method, Object target) {
@@ -305,6 +313,16 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
         Preconditions.checkNotNull(statementExecutor, "statementExecutor can't be null");
 
         this.statementExecutor = statementExecutor;
+    }
+
+    public void setInfileBufferSize(int infileBufferSize) {
+        Preconditions.checkArgument(infileBufferSize > 0, "infile buffer size must be positive");
+        this.infileBufferSize = infileBufferSize;
+    }
+
+    public void setRowBufferSize(int rowBufferSize) {
+        Preconditions.checkArgument(rowBufferSize > 0, "row buffer size must be positive");
+        this.rowBufferSize = rowBufferSize;
     }
 
     /**

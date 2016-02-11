@@ -62,7 +62,7 @@ public class SingleInfileObjectLoaderBuilderTest {
                 .withDefaultTableName()
                 .withStatementExecutor(new ConnectionBasedStatementExecutor(connection))
                 .usingAnnotationInspector(new PersistenceAnnotationInspector())
-                .withBuffer(new InfileDataBuffer())
+                .withBuffer(InfileDataBuffer.builder().build())
                 .build();
     }
 

@@ -57,6 +57,11 @@ public class InfileDataBuffer implements InfileRow {
      */
     public static final int DEFAULT_ROW_BUFFER_SIZE = 1024 * 10; // 10kB
 
+    /**
+     * Default charset
+     */
+    public static final Charset DEFAULT_CHARSET = Charsets.UTF_8;
+
     // Infile constants
     protected static final char MYSQL_ESCAPE_CHAR = '\\';
     protected static final String MYSQL_NULL_STRING = MYSQL_ESCAPE_CHAR + "N";
@@ -80,6 +85,16 @@ public class InfileDataBuffer implements InfileRow {
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormat.forPattern("HH:mm:ss");
     private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
 
+    /**
+     * Returns new {@link Builder} instance to help customize
+     * and build new {@link InfileDataBuffer} instance.
+     *
+     * @return new {@link Builder} instance
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
+
     // Utilities
     private final CharsetEncoder encoder;
 
@@ -95,8 +110,15 @@ public class InfileDataBuffer implements InfileRow {
     private PersistenceAnnotationInspector persistenceAnnotationInspector =
             CachedProxy.create(new PersistenceAnnotationInspector());
 
+    /**
+     * @deprecated This constructor will eventually become private. Use {@link InfileDataBuffer#builder()} instead.
+     */
+    @Deprecated
     public InfileDataBuffer(Charset charset, int infileBufferSize, int rowBufferSize) {
         Preconditions.checkNotNull(charset, "No charset set for encoding.");
+        Preconditions.checkArgument(infileBufferSize > 0, "infileBufferSize should be positive");
+        Preconditions.checkArgument(rowBufferSize > 0, "rowBufferSize should be positive");
+
         this.encoder = charset.newEncoder();
 
         // This not using the encoder because that API is tedious just to encode a few strings.
@@ -113,12 +135,20 @@ public class InfileDataBuffer implements InfileRow {
         this.infileBuffer = ByteBuffer.allocate(infileBufferSize);
     }
 
+    /**
+     * @deprecated This constructor will eventually be removed. Use {@link InfileDataBuffer#builder()} instead.
+     */
+    @Deprecated
     public InfileDataBuffer(Charset charset) {
         this(charset, DEFAULT_INFILE_BUFFER_SIZE, DEFAULT_ROW_BUFFER_SIZE);
     }
 
+    /**
+     * @deprecated This constructor will eventually beremoved. Use {@link InfileDataBuffer#builder()} instead.
+     */
+    @Deprecated
     public InfileDataBuffer() {
-        this(Charsets.UTF_8);
+        this(DEFAULT_CHARSET);
     }
 
     /**
@@ -304,4 +334,59 @@ public class InfileDataBuffer implements InfileRow {
         this.rowBuffer.clear();
         return this;
     }
+
+    /* Package private scope for testing purposes */
+    int getRowBufferSize() {
+        return this.rowBuffer.capacity();
+    }
+
+    /* Package private scope for testing purposes */
+    int getInfileBufferSize() {
+        return this.infileBuffer.capacity();
+    }
+
+    /* Package private scope for testing purposes */
+    Charset getCharset() {
+        return encoder.charset();
+    }
+
+    /**
+     * A builder for {@link InfileDataBuffer} instances.
+     *
+     * @author ivan.german
+     */
+    public static final class Builder {
+
+        private Charset charset;
+        private int infileBufferSize;
+        private int rowBufferSize;
+
+        private Builder() {
+            this.charset = DEFAULT_CHARSET;
+            this.infileBufferSize = DEFAULT_INFILE_BUFFER_SIZE;
+            this.rowBufferSize = DEFAULT_ROW_BUFFER_SIZE;
+        }
+
+        public Builder withCharset(Charset charset) {
+            this.charset = Preconditions.checkNotNull(charset, "charset should be defined");
+            return this;
+        }
+
+        public Builder withInfileBufferSize(int infileBufferSize) {
+            Preconditions.checkArgument(infileBufferSize > 0, "infileBufferSize should be positive");
+            this.infileBufferSize = infileBufferSize;
+            return this;
+        }
+
+        public Builder withRowBufferSize(int rowBufferSize) {
+            Preconditions.checkArgument(rowBufferSize > 0, "rowBufferSize should be positive");
+            this.rowBufferSize = rowBufferSize;
+            return this;
+        }
+
+        public InfileDataBuffer build() {
+            return new InfileDataBuffer(this.charset, this.infileBufferSize, this.rowBufferSize);
+        }
+    }
+
 }
