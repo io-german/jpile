@@ -4,7 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.opower.persistence.jpile.infile.driver.C3P0JdbcDriverSupport;
 import com.opower.persistence.jpile.infile.driver.HikariJdbcDriverSupport;
 import com.opower.persistence.jpile.infile.driver.MysqlJdbcDriverSupport;
-import com.opower.persistence.jpile.util.JdbcUtil;
+import com.opower.persistence.jpile.jdbc.StatementCallback;
 
 import java.io.InputStream;
 import java.sql.SQLException;
@@ -33,7 +33,7 @@ import java.util.List;
  * @see com.mysql.jdbc.Statement#setLocalInfileInputStream(java.io.InputStream)
  * @since 1.0
  */
-public class InfileStatementCallback implements JdbcUtil.StatementCallback<List<Exception>> {
+public class InfileStatementCallback implements StatementCallback<List<Exception>> {
 
     private static final List<JdbcDriverSupport> SUPPORTED_DRIVERS =
             ImmutableList.of(new HikariJdbcDriverSupport(), new C3P0JdbcDriverSupport(), new MysqlJdbcDriverSupport());

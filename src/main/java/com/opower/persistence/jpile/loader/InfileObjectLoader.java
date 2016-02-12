@@ -1,14 +1,15 @@
 package com.opower.persistence.jpile.loader;
 
-import java.io.Flushable;
-import java.sql.Connection;
-import java.util.Collections;
-import java.util.List;
 import com.google.common.base.Preconditions;
 import com.opower.persistence.jpile.infile.InfileDataBuffer;
 import com.opower.persistence.jpile.infile.InfileRow;
 import com.opower.persistence.jpile.infile.InfileStatementCallback;
-import com.opower.persistence.jpile.util.JdbcUtil;
+import com.opower.persistence.jpile.jdbc.StatementCallback;
+import com.opower.persistence.jpile.jdbc.StatementExecutor;
+
+import java.io.Flushable;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * This class provides a convenient pattern for loading POJOs in batch to MySQL via tha 'LOAD DATA INFILE' protocol.
@@ -30,7 +31,7 @@ import com.opower.persistence.jpile.util.JdbcUtil;
  */
 public abstract class InfileObjectLoader<E> implements Flushable {
 
-    protected Connection connection;
+    protected StatementExecutor statementExecutor;
     protected String loadInfileSql;
     protected InfileDataBuffer infileDataBuffer;
 
@@ -77,10 +78,10 @@ public abstract class InfileObjectLoader<E> implements Flushable {
      */
     @Override
     public void flush() {
-        JdbcUtil.StatementCallback<List<Exception>> statementCallback = new InfileStatementCallback(
+        StatementCallback<List<Exception>> statementCallback = new InfileStatementCallback(
                 this.loadInfileSql, this.infileDataBuffer.asInputStream()
         );
-        this.warnings = JdbcUtil.execute(this.connection, statementCallback);
+        this.warnings = this.statementExecutor.execute(statementCallback);
         this.infileDataBuffer.clear();
     }
 
