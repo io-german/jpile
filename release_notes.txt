@@ -4,6 +4,7 @@ New in 1.8.0
     Now uses Spring 3.2.6
     Added `HierarchicalInfileObjectLoader#setIgnoredClasses`; deprecated `HierarchicalInfileObjectLoader#setClassesToIgnore`
     Added more flexible events processing approach using Guava's EventBus
+    Replace `JdbcUtil` with `StatementExecutor` interface; deprecated `JdbcUtil#execute`, `JdbcUtil#StatementCallback`
 
 New in 1.7.11
     Added greater precision when persisting float values

@@ -7,6 +7,7 @@ import com.google.common.eventbus.EventBus;
 import com.google.common.io.CharStreams;
 import com.mysql.jdbc.Statement;
 import com.opower.persistence.jpile.infile.InfileDataBuffer;
+import com.opower.persistence.jpile.jdbc.ConnectionBasedStatementExecutor;
 import com.opower.persistence.jpile.reflection.PersistenceAnnotationInspector;
 import com.opower.persistence.jpile.sample.Customer;
 import org.junit.Before;
@@ -59,7 +60,7 @@ public class SingleInfileObjectLoaderBuilderTest {
 
         objectLoader = new SingleInfileObjectLoaderBuilder<>(Customer.class, new EventBus())
                 .withDefaultTableName()
-                .withJdbcConnection(connection)
+                .withStatementExecutor(new ConnectionBasedStatementExecutor(connection))
                 .usingAnnotationInspector(new PersistenceAnnotationInspector())
                 .withBuffer(new InfileDataBuffer())
                 .build();
@@ -90,8 +91,8 @@ public class SingleInfileObjectLoaderBuilderTest {
         objectLoader.add(customer);
         objectLoader.flush();
 
-        verify(connection, times(2)).createStatement();
-        verify(statement).execute(anyString());
+        verify(connection, times(3)).createStatement();
+        verify(statement, times(2)).execute(anyString());
     }
 
     /**

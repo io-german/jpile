@@ -3,7 +3,8 @@ package com.opower.persistence.jpile.util;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
-import com.google.common.base.Throwables;
+
+import com.opower.persistence.jpile.jdbc.ConnectionBasedStatementExecutor;
 
 /**
  * A jdbc helper util class. This class was created so that Spring JDBC is no longer a dependency.
@@ -21,31 +22,32 @@ public final class JdbcUtil {
      * @param statementCallback the callback
      * @param <E>               the return type
      * @return the return value from callback
+     *
+     * @deprecated use {@link com.opower.persistence.jpile.jdbc.StatementExecutor}.
      */
-    public static <E> E execute(Connection connection, StatementCallback<E> statementCallback) {
-        Statement statement = null;
-        try {
-            statement = connection.createStatement();
-            return statementCallback.doInStatement(statement);
-        }
-        catch (SQLException e) {
-            throw Throwables.propagate(e);
-        }
-        finally {
-            if (statement != null) {
-                try {
-                    statement.close();
-                }
-                catch (SQLException e) {
-                    // Do nothing
-                }
+    @Deprecated
+    public static <E> E execute(Connection connection, final StatementCallback<E> statementCallback) {
+        return new ConnectionBasedStatementExecutor(connection)
+                .execute(transformCallback(statementCallback));
+    }
+
+    private static <T> com.opower.persistence.jpile.jdbc.StatementCallback<T>
+            transformCallback(final StatementCallback<T> callback) {
+
+        return new com.opower.persistence.jpile.jdbc.StatementCallback<T>() {
+            @Override
+            public T doInStatement(Statement statement) throws SQLException {
+                return callback.doInStatement(statement);
             }
-        }
+        };
     }
 
     /**
      * A helper callback method for this util class
+     *
+     * @deprecated use {@link com.opower.persistence.jpile.jdbc.StatementCallback} instead
      */
+    @Deprecated
     public interface StatementCallback<E> {
         /**
          * @param statement the statement to use
