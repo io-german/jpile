@@ -78,10 +78,12 @@ public abstract class InfileObjectLoader<E> implements Flushable {
      */
     @Override
     public void flush() {
-        StatementCallback<List<Exception>> statementCallback = new InfileStatementCallback(
-                this.loadInfileSql, this.infileDataBuffer.asInputStream()
-        );
-        this.warnings = this.statementExecutor.execute(statementCallback);
+        if (!infileDataBuffer.isEmptyInfileBuffer()) {
+            StatementCallback<List<Exception>> statementCallback = new InfileStatementCallback(
+                    this.loadInfileSql, this.infileDataBuffer.asInputStream()
+            );
+            this.warnings = this.statementExecutor.execute(statementCallback);
+        }
         this.infileDataBuffer.clear();
     }
 

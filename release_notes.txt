@@ -7,6 +7,7 @@ New in 1.8.0
     Replace `JdbcUtil` with `StatementExecutor` interface; deprecated `JdbcUtil#execute`, `JdbcUtil#StatementCallback`
     Add `ConnectionBasedStatementExecutor` and `DataSourceBasedStatementExecutor` classes as default implementations of `StatementExecutor` interface
     Now it's possible to configure infile and row buffers sizes
+    InfileBuffer now doesn't flush to database if it is empty
 
 New in 1.7.11
     Added greater precision when persisting float values
