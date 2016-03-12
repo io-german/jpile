@@ -40,11 +40,11 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 /**
- * Tests object loader for correctness
+ * Tests object loader for correctness using {@link com.opower.persistence.jpile.jdbc.ConnectionBasedStatementExecutor}.
  *
  * @author amir.raminfar
  */
-public class IntTestHierarchicalInfileObjectLoader extends AbstractIntTestForJPile {
+public class IntTestHierarchicalInfileObjectLoaderConnectionBased extends AbstractIntTestForJPile {
 
     private static final Function<SaveEntityEvent, SaveEntityEventHolder> SAVE_ENTITY_EVENT_INDEX =
             new Function<SaveEntityEvent, SaveEntityEventHolder>() {

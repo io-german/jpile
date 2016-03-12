@@ -5,6 +5,7 @@ New in 1.8.0
     Added `HierarchicalInfileObjectLoader#setIgnoredClasses`; deprecated `HierarchicalInfileObjectLoader#setClassesToIgnore`
     Added more flexible events processing approach using Guava's EventBus
     Replace `JdbcUtil` with `StatementExecutor` interface; deprecated `JdbcUtil#execute`, `JdbcUtil#StatementCallback`
+    Add `ConnectionBasedStatementExecutor` and `DataSourceBasedStatementExecutor` classes as default implementations of `StatementExecutor` interface
     Now it's possible to configure infile and row buffers sizes
 
 New in 1.7.11

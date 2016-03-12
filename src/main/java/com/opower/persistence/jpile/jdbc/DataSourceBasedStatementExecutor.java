@@ -14,6 +14,8 @@ import java.sql.SQLException;
  * This implementation has no mechanism to process failures from underlying
  * {@link ConnectionBasedStatementExecutor} and retry execution with another
  * {@link java.sql.Connection}. If you need such behavior then create a subclass.
+ * <p/>
+ * Be aware that this implementation is not thread-safe.
  *
  * @author ivan.german
  */
@@ -46,12 +48,16 @@ public class DataSourceBasedStatementExecutor implements StatementExecutor {
     @Override
     public void shutdown() {
         if (this.connectionBasedStatementExecutor != null) {
-            this.connectionBasedStatementExecutor.closeConnection();
             this.connectionBasedStatementExecutor.shutdown();
+            this.connectionBasedStatementExecutor.closeConnection();
+            this.connectionBasedStatementExecutor = null;
         }
     }
 
-    protected void initNewConnection() {
+    /**
+     * Ensure that previous connection is closed and open new one.
+     */
+    public void initNewConnection() {
         try {
             shutdown();
             this.connectionBasedStatementExecutor = new ConnectionBasedStatementExecutor(dataSource.getConnection());
