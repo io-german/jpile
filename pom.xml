@@ -157,6 +157,13 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- JSR 305 Annotations -->
+        <dependency>
+            <groupId>com.google.code.findbugs</groupId>
+            <artifactId>jsr305</artifactId>
+            <version>${findbugs-maven-version}</version>
+        </dependency>
+
         <!-- Runtime Spring Context -->
         <dependency>
             <groupId>org.springframework</groupId>
