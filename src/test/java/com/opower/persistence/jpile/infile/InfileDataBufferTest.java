@@ -20,6 +20,8 @@ import java.nio.charset.Charset;
 import java.util.Date;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Test cases for the InfileDataBuffer
@@ -259,6 +261,34 @@ public class InfileDataBufferTest {
                 .withInfileBufferSize(256)
                 .withRowBufferSize(1024)
                 .build();
+    }
+
+    @Test
+    public void testIsEmptyInfileBuffer() {
+        InfileDataBuffer buffer = InfileDataBuffer.builder().build();
+        assertTrue(buffer.isEmptyInfileBuffer());
+    }
+
+    @Test
+    public void testIsEmptyInlineBufferNotEmpty() {
+        InfileDataBuffer buffer = InfileDataBuffer.builder().build();
+
+        buffer.append("not empty string");
+        buffer.addRowToInfile();
+
+        assertFalse(buffer.isEmptyInfileBuffer());
+    }
+
+    @Test
+    public void testIsEmptyInlineBufferAfterClear() {
+        InfileDataBuffer buffer = InfileDataBuffer.builder().build();
+
+        buffer.append("not empty string");
+        buffer.addRowToInfile();
+
+        buffer.clear();
+
+        assertTrue(buffer.isEmptyInfileBuffer());
     }
 
     private void addRowAndAssertContents(String expected) {

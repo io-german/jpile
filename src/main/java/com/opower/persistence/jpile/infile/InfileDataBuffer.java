@@ -325,6 +325,15 @@ public class InfileDataBuffer implements InfileRow {
     }
 
     /**
+     * Checks that buffer is empty.
+     *
+     * @return true if {@link #infileBuffer} is empty. false otherwise
+     */
+    public boolean isEmptyInfileBuffer() {
+        return this.infileBuffer.position() == 0;
+    }
+
+    /**
      * Clears the current row and returns this buffer as row view.
      *
      * @return this

@@ -91,8 +91,36 @@ public class SingleInfileObjectLoaderBuilderTest {
         objectLoader.add(customer);
         objectLoader.flush();
 
+        /*
+         * 1. Disable foreign keys
+         * 2. Find maxId
+         * 3. Flush
+         */
         verify(connection, times(3)).createStatement();
+
+        /*
+         * Find maxId use executeQuery instead of execute
+         */
         verify(statement, times(2)).execute(anyString());
+    }
+
+    /**
+     * Verify that no queries are executed when call {@link SingleInfileObjectLoader#flush()} for the empty buffer.
+     */
+    @Test
+    public void testFlushEmptyBuffer() throws Exception {
+        objectLoader.flush();
+
+        /*
+         * 1. Disable foreign keys
+         * 2. Find maxId
+         */
+        verify(connection, times(2)).createStatement();
+
+        /*
+         * Find maxId use executeQuery instead of execute
+         */
+        verify(statement, times(1)).execute(anyString());
     }
 
     /**
