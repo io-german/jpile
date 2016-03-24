@@ -38,8 +38,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 public class SingleInfileObjectLoaderBuilder<E> {
 
-    private final EventBus eventBus;
     private final Class<? extends E> aClass;
+    private EventBus eventBus;
     private StatementExecutor statementExecutor;
     private InfileDataBuffer infileDataBuffer;
     private PersistenceAnnotationInspector annotationInspector;
@@ -50,9 +50,8 @@ public class SingleInfileObjectLoaderBuilder<E> {
     private boolean useReplace = false;
     private SecondaryTable secondaryTable;
 
-    public SingleInfileObjectLoaderBuilder(Class<? extends E> aClass, EventBus eventBus) {
+    public SingleInfileObjectLoaderBuilder(Class<? extends E> aClass) {
         this.aClass = checkNotNull(aClass, "Class cannot be null");
-        this.eventBus = checkNotNull(eventBus, "Event bus cannot be null");
     }
 
     public SingleInfileObjectLoaderBuilder<E> withBuffer(InfileDataBuffer infileDataBuffer) {
@@ -84,6 +83,11 @@ public class SingleInfileObjectLoaderBuilder<E> {
     public SingleInfileObjectLoaderBuilder<E> withTableName(String tableName) {
         this.defaultTableName = false;
         this.tableName = tableName;
+        return this;
+    }
+
+    public SingleInfileObjectLoaderBuilder<E> withEventBus(EventBus eventBus) {
+        this.eventBus = checkNotNull(eventBus, "Event bus cannot be null");
         return this;
     }
 
@@ -127,12 +131,13 @@ public class SingleInfileObjectLoaderBuilder<E> {
         checkNotNull(this.annotationInspector, "persistenceAnnotationInspector cannot be null");
         checkNotNull(this.infileDataBuffer, "infileDataBuffer cannot be null");
 
-        SingleInfileObjectLoader<E> objectLoader = new SingleInfileObjectLoader<>(this.aClass, this.eventBus);
-        objectLoader.statementExecutor = this.statementExecutor;
-        objectLoader.infileDataBuffer = this.infileDataBuffer;
-        objectLoader.persistenceAnnotationInspector = this.annotationInspector;
-        objectLoader.allowNull = this.allowNull;
-        objectLoader.embedChild = this.embedded;
+        SingleInfileObjectLoader<E> objectLoader = new SingleInfileObjectLoader<>(this.aClass);
+        objectLoader.setEventBus(this.eventBus);
+        objectLoader.setStatementExecutor(this.statementExecutor);
+        objectLoader.setInfileDataBuffer(this.infileDataBuffer);
+        objectLoader.setPersistenceAnnotationInspector(this.annotationInspector);
+        objectLoader.setAllowNull(this.allowNull);
+        objectLoader.setEmbedChild(this.embedded);
         if (this.defaultTableName) {
             if (this.secondaryTable == null) {
                 this.tableName = this.annotationInspector.tableName(this.aClass);
@@ -141,7 +146,7 @@ public class SingleInfileObjectLoaderBuilder<E> {
                 this.tableName = this.secondaryTable.name();
             }
         }
-        objectLoader.tableName = checkNotNull(this.tableName, "tableName cannot be null");
+        objectLoader.setTableName(checkNotNull(this.tableName, "tableName cannot be null"));
         this.findAnnotations(objectLoader);
         if (!this.embedded) {
             String idColumnName = findPrimaryIdColumnName(objectLoader);
@@ -166,11 +171,11 @@ public class SingleInfileObjectLoaderBuilder<E> {
             Column column = annotatedMethod.getAnnotation();
             if (this.secondaryTable != null) {
                 if (column.table().equals(this.tableName)) {
-                    objectLoader.mappings.put(annotatedMethod.getAnnotation().name(), annotatedMethod.getMethod());
+                    objectLoader.getMappings().put(annotatedMethod.getAnnotation().name(), annotatedMethod.getMethod());
                 }
             }
             else if (column.table().isEmpty() || column.table().equals(this.tableName)) {
-                objectLoader.mappings.put(annotatedMethod.getAnnotation().name(), annotatedMethod.getMethod());
+                objectLoader.getMappings().put(annotatedMethod.getAnnotation().name(), annotatedMethod.getMethod());
             }
         }
 
@@ -183,7 +188,7 @@ public class SingleInfileObjectLoaderBuilder<E> {
                     : this.annotationInspector.annotatedMethodsWith(this.aClass, JoinColumn.class)) {
                 if (this.annotationInspector.hasAnnotation(annotatedMethod.getMethod(), ManyToOne.class)
                     || this.annotationInspector.hasAnnotation(annotatedMethod.getMethod(), OneToOne.class)) {
-                    objectLoader.mappings.put(annotatedMethod.getAnnotation().name(), annotatedMethod.getMethod());
+                    objectLoader.getMappings().put(annotatedMethod.getAnnotation().name(), annotatedMethod.getMethod());
                 }
             }
             // Finds all columns with @Embedded or @EmbeddedId
@@ -192,7 +197,8 @@ public class SingleInfileObjectLoaderBuilder<E> {
                     this.annotationInspector.annotatedMethodsWith(this.aClass, EmbeddedId.class))) {
                 Method method = annotatedMethod.getMethod();
                 SingleInfileObjectLoader<Object> embeddedObjectLoader
-                        = new SingleInfileObjectLoaderBuilder<>(method.getReturnType(), this.eventBus)
+                        = new SingleInfileObjectLoaderBuilder<>(method.getReturnType())
+                        .withEventBus(this.eventBus)
                         .withBuffer(this.infileDataBuffer)
                         .withDefaultTableName()
                         .withStatementExecutor(this.statementExecutor)
@@ -201,7 +207,7 @@ public class SingleInfileObjectLoaderBuilder<E> {
                         .allowNull()
                         .isEmbedded()
                         .build();
-                objectLoader.embeds.put(method, embeddedObjectLoader);
+                objectLoader.getEmbeds().put(method, embeddedObjectLoader);
             }
         }
     }
@@ -219,11 +225,14 @@ public class SingleInfileObjectLoaderBuilder<E> {
             else if (column != null && !column.name().isEmpty()) {
                 name = column.name();
             }
-            objectLoader.mappings.put(name, primaryIdGetter);
+            objectLoader.getMappings().put(name, primaryIdGetter);
             GeneratedValue generatedValue = this.annotationInspector.findAnnotation(primaryIdGetter, GeneratedValue.class);
-            objectLoader.autoGenerateId = this.secondaryTable == null
-                                          && generatedValue != null
-                                          && generatedValue.strategy() == GenerationType.AUTO;
+
+            boolean autoGenerateId = this.secondaryTable == null
+                    && generatedValue != null
+                    && generatedValue.strategy() == GenerationType.AUTO;
+
+            objectLoader.setAutoGenerateId(autoGenerateId);
             return name;
         }
         return null;
@@ -252,7 +261,7 @@ public class SingleInfileObjectLoaderBuilder<E> {
             joiner.appendTo(builder, setClauses);
         }
 
-        objectLoader.loadInfileSql = builder.toString();
+        objectLoader.setLoadInfileSql(builder.toString());
     }
 
     /**

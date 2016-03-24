@@ -4,10 +4,12 @@ import com.google.common.base.Preconditions;
 import com.opower.persistence.jpile.infile.InfileDataBuffer;
 import com.opower.persistence.jpile.infile.InfileRow;
 import com.opower.persistence.jpile.infile.InfileStatementCallback;
+import com.opower.persistence.jpile.jdbc.ConnectionBasedStatementExecutor;
 import com.opower.persistence.jpile.jdbc.StatementCallback;
 import com.opower.persistence.jpile.jdbc.StatementExecutor;
 
 import java.io.Flushable;
+import java.sql.Connection;
 import java.util.Collections;
 import java.util.List;
 
@@ -31,9 +33,34 @@ import java.util.List;
  */
 public abstract class InfileObjectLoader<E> implements Flushable {
 
+    /**
+     * Statement executor that will execute JDBC statements
+     * @deprecated this field will eventually become private. Use corresponding accessor/mutator instead.
+     */
+    @Deprecated
     protected StatementExecutor statementExecutor;
+
+    /**
+     * Query to insert entities to database
+     * @deprecated this field will eventually become private. Use corresponding accessor/mutator instead.
+     */
+    @Deprecated
     protected String loadInfileSql;
+
+    /**
+     * Buffer with entities prepared to insert to database
+     * @deprecated this field will eventually become private. Use corresponding accessor/mutator instead.
+     */
+    @Deprecated
     protected InfileDataBuffer infileDataBuffer;
+
+    /**
+     * JDBC connection for entities insertion
+     * @deprecated this field will be eventually removed. Use {@link #setStatementExecutor(StatementExecutor)}
+     * with {@link ConnectionBasedStatementExecutor} instead.
+     */
+    @Deprecated
+    protected Connection connection;
 
     // Lazy initialized. Normally, there will be none. If there are any there could be a ton, so we just
     // build a very large one if needed.
@@ -43,6 +70,46 @@ public abstract class InfileObjectLoader<E> implements Flushable {
      * For subclasses to extend correctly
      */
     protected InfileObjectLoader() {
+    }
+
+    /**
+     * @return query to insert entities to database
+     */
+    protected String getLoadInfileSql() {
+        return this.loadInfileSql;
+    }
+
+    protected void setLoadInfileSql(String loadInfileSql) {
+        this.loadInfileSql = loadInfileSql;
+    }
+
+    /**
+     * @return buffer with entities prepared to insert to database
+     */
+    protected InfileDataBuffer getInfileDataBuffer() {
+        return this.infileDataBuffer;
+    }
+
+    protected void setInfileDataBuffer(InfileDataBuffer infileDataBuffer) {
+        this.infileDataBuffer = infileDataBuffer;
+    }
+
+    /**
+     * @return it is used to execute JDBC statements
+     */
+    protected StatementExecutor getStatementExecutor() {
+        if (this.statementExecutor == null) {
+            Preconditions.checkState(this.connection != null, "");
+            this.statementExecutor = new ConnectionBasedStatementExecutor(this.connection);
+        }
+        return this.statementExecutor;
+    }
+
+    protected void setStatementExecutor(StatementExecutor statementExecutor) {
+        if (this.statementExecutor != null) {
+            this.statementExecutor.shutdown();
+        }
+        this.statementExecutor = statementExecutor;
     }
 
     /**
@@ -78,11 +145,11 @@ public abstract class InfileObjectLoader<E> implements Flushable {
      */
     @Override
     public void flush() {
-        if (!infileDataBuffer.isEmptyInfileBuffer()) {
+        if (!this.infileDataBuffer.isEmptyInfileBuffer()) {
             StatementCallback<List<Exception>> statementCallback = new InfileStatementCallback(
                     this.loadInfileSql, this.infileDataBuffer.asInputStream()
             );
-            this.warnings = this.statementExecutor.execute(statementCallback);
+            this.warnings = getStatementExecutor().execute(statementCallback);
         }
         this.infileDataBuffer.clear();
     }
