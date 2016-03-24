@@ -1,4 +1,7 @@
-New in 1.8.0
+New in 1.8.1
+    Reintroduce and deprecate the API removed in 1.8.0 release
+
+New in 1.8.0 - this version breaks backwards compatibility and should not be used
     Many minor code improvements
     Minor fixes for performance test
     Now uses Spring 3.2.6

@@ -178,7 +178,8 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
         if (this.primaryObjectLoaders.containsKey(aClass)) {
             return;
         }
-        SingleInfileObjectLoader<Object> primaryLoader = new SingleInfileObjectLoaderBuilder<>(aClass, this.eventBus)
+        SingleInfileObjectLoader<Object> primaryLoader = new SingleInfileObjectLoaderBuilder<>(aClass)
+                .withEventBus(this.eventBus)
                 .withBuffer(newInfileDataBuffer())
                 .withDefaultTableName()
                 .withStatementExecutor(this.statementExecutor)
@@ -190,8 +191,8 @@ public class HierarchicalInfileObjectLoader implements Flushable, Closeable {
 
         for (SecondaryTable secondaryTable : this.persistenceAnnotationInspector.findSecondaryTables(aClass)) {
             if (!this.secondaryClassesToIgnore.contains(secondaryTable.name())) {
-                SingleInfileObjectLoader<Object> secondaryLoader
-                        = new SingleInfileObjectLoaderBuilder<>(aClass, this.eventBus)
+                SingleInfileObjectLoader<Object> secondaryLoader = new SingleInfileObjectLoaderBuilder<>(aClass)
+                        .withEventBus(this.eventBus)
                         .withBuffer(newInfileDataBuffer())
                         .withDefaultTableName()
                         .usingSecondaryTable(secondaryTable)

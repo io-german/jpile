@@ -14,6 +14,10 @@ import java.sql.Statement;
  * <p/>
  * Don't forget to {@link #shutdown()} the instance to ensure that foreign key
  * constraints are re-enabled.
+ * <p/>
+ * <b>Important</b>: connection is not closed in {@link #shutdown()} because it is not
+ * created within {@link ConnectionBasedStatementExecutor} and that's caller's responsibility to
+ * manage connection lifecycle.
  *
  * @author ivan.german
  */
@@ -37,9 +41,12 @@ public class ConnectionBasedStatementExecutor implements StatementExecutor {
     }
 
     /**
-     * Force close the connection. This method is redundant for {@link StatementExecutor} interface
-     * but can be used for other {@link StatementExecutor} that uses this exact implementation
-     * (e.g. {@link DataSourceBasedStatementExecutor}).
+     * Force close the connection. Connection is not closed in {@link #shutdown()} because it is not
+     * created within {@link ConnectionBasedStatementExecutor} and it is caller's responsibility to
+     * manage connection lifecycle.
+     *
+     * This method is redundant for {@link StatementExecutor} interface but can be used for other
+     * {@link StatementExecutor} that uses this exact implementation (e.g. {@link DataSourceBasedStatementExecutor}).
      */
     public void closeConnection() {
         try {
@@ -51,7 +58,7 @@ public class ConnectionBasedStatementExecutor implements StatementExecutor {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override
     public <T> T execute(StatementCallback<T> statementCallback) {
@@ -67,7 +74,11 @@ public class ConnectionBasedStatementExecutor implements StatementExecutor {
     }
 
     /**
-     * @inheritDoc
+     * Re-enables foreign key constraints for current connection.
+     * <p/>
+     * <b>Important</b>: connection is not closed here because it is not
+     * created within {@link ConnectionBasedStatementExecutor} and it is
+     * caller's responsibility to manage connection lifecycle.
      */
     @Override
     public void shutdown() {

@@ -32,7 +32,7 @@ public class DataSourceBasedStatementExecutor implements StatementExecutor {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override
     public <T> T execute(StatementCallback<T> statementCallback) {
@@ -43,7 +43,7 @@ public class DataSourceBasedStatementExecutor implements StatementExecutor {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override
     public void shutdown() {
