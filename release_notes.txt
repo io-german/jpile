@@ -1,3 +1,7 @@
+New in 1.8.2
+    Remove side-effect in constructor of `DataSourceBasedStatementExecutor`. Lazily initialize connection before call to `execute` method
+    FIXED possible connection leak in `DataSourceBasedStatementExecutor` class.
+
 New in 1.8.1
     Reintroduce and deprecate the API removed in 1.8.0 release
 

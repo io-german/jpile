@@ -1,5 +1,6 @@
 package com.opower.persistence.jpile.jdbc;
 
+import org.junit.After;
 import org.junit.Test;
 
 import javax.sql.DataSource;
@@ -10,6 +11,7 @@ import java.sql.Statement;
 import static com.opower.persistence.jpile.util.JdbcTestUtil.openNewConnection;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -20,34 +22,58 @@ import static org.mockito.Mockito.when;
  */
 public class IntTestDataSourceBasedStatementExecutor {
 
+    private DataSourceBasedStatementExecutor executor;
+
+    @After
+    public void tearDown() {
+        if (this.executor != null) {
+            this.executor.shutdown();
+        }
+    }
+
     /**
-     * Create {@link DataSourceBasedStatementExecutor}, execute query on it and shut it down.
+     * Execute query using {@link DataSourceBasedStatementExecutor}.
      */
     @Test
     public void testExecute() throws SQLException {
-        final String query = "SELECT 1";
+        String query = "SELECT 1";
 
         Connection connection = openNewConnection();
 
         DataSource dataSource = mock(DataSource.class);
         when(dataSource.getConnection()).thenReturn(connection);
 
-        DataSourceBasedStatementExecutor executor = new DataSourceBasedStatementExecutor(dataSource);
+        this.executor = new DataSourceBasedStatementExecutor(dataSource);
 
-        boolean result = executor.execute(new StatementCallback<Boolean>() {
-            @Override
-            public Boolean doInStatement(Statement statement) throws SQLException {
-                return statement.execute(query);
-            }
-        });
+        boolean result = this.executor.execute(statementCallbackForQuery(query));
 
         assertTrue(result);
-
-        executor.shutdown();
     }
 
     /**
-     * Create {@link DataSourceBasedStatementExecutor}, shut it down and init new connection.
+     * Execute query and close {@link DataSourceBasedStatementExecutor}.
+     * Check that connection is closed.
+     */
+    @Test
+    public void testShutdownExecutor() throws SQLException {
+        String query = "SELECT 1";
+
+        Connection connection = openNewConnection();
+
+        DataSource dataSource = mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
+        this.executor = new DataSourceBasedStatementExecutor(dataSource);
+
+        this.executor.execute(statementCallbackForQuery(query));
+        this.executor.shutdown();
+
+        assertTrue(connection.isClosed());
+    }
+
+    /**
+     * Shut {@link DataSourceBasedStatementExecutor} down and init new connection.
+     * Check that first connection is closed and second one is opened.
      */
     @Test
     public void testShutdownAndInitialize() throws SQLException {
@@ -57,15 +83,46 @@ public class IntTestDataSourceBasedStatementExecutor {
         DataSource dataSource = mock(DataSource.class);
         when(dataSource.getConnection()).thenReturn(connection1, connection2);
 
-        DataSourceBasedStatementExecutor executor = new DataSourceBasedStatementExecutor(dataSource);
-        executor.shutdown();
-        executor.initNewConnection();
+        this.executor = new DataSourceBasedStatementExecutor(dataSource);
+        this.executor.initNewConnection();
+        this.executor.shutdown();
+        this.executor.initNewConnection();
 
         assertTrue(connection1.isClosed());
         assertFalse(connection2.isClosed());
+    }
 
-        executor.shutdown();
+    /**
+     * Execute query that fails and check that connection is closed automatically.
+     */
+    @Test
+    public void testExecuteQueryThatFails() throws Throwable {
+        Connection connection = openNewConnection();
 
-        assertTrue(connection2.isClosed());
+        DataSource dataSource = mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
+        this.executor = new DataSourceBasedStatementExecutor(dataSource);
+
+        try {
+            String query = "invalid query";
+            this.executor.execute(statementCallbackForQuery(query));
+            fail("Exception must be thrown in the previous line");
+        }
+        catch (Exception e) {
+            /* Ignore this exception. We know that syntax is invalid. */
+        }
+        finally {
+            assertTrue(connection.isClosed());
+        }
+    }
+
+    private StatementCallback<Boolean> statementCallbackForQuery(final String query) {
+        return new StatementCallback<Boolean>() {
+            @Override
+            public Boolean doInStatement(Statement statement) throws SQLException {
+                return statement.execute(query);
+            }
+        };
     }
 }
